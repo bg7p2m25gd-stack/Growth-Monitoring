@@ -1,0 +1,658 @@
+<meta charset="utf-8">
+<title>Edmonton Growth Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+/* Layout: a planning-office console. Header with city totals, three working tabs
+   (map + neighbourhood file, plan buildout ledger, side-by-side compare). Slate neutrals
+   biased toward the map blue; ochre accent borrowed from the low-density yellow on plan maps. */
+:root {
+  --bg: #f5f6f7;
+  --panel: #ffffff;
+  --ink: #15191e;
+  --ink-2: #4a525c;
+  --ink-3: #737b86;
+  --rule: #dde1e6;
+  --rule-2: #eceff2;
+  --accent: #9a6a00;
+  --accent-soft: #f6ead0;
+  --nodata: #e6e8eb;
+  --map-line: #ffffff;
+
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s-other: #a3a9b1;
+  --seq-1: #cde2fb; --seq-2: #9ec5f4; --seq-3: #6da7ec; --seq-4: #3987e5; --seq-5: #256abf; --seq-6: #184f95; --seq-7: #0d366b;
+  --div-neg: #d03b3b; --div-mid: #f0efec;
+  --good: #0ca30c; --warn: #fab219; --bad: #d03b3b;
+  --good-ink: #0b6e0b; --bad-ink: #a52b2b;
+
+  --f-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --f-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --f-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121519; --panel: #1a1e23; --ink: #eef1f4; --ink-2: #b4bcc6; --ink-3: #8a929c;
+    --rule: #2c3239; --rule-2: #22272d; --accent: #e0aa3e; --accent-soft: #3a2f17; --nodata: #2a3037; --map-line: #121519;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s-other: #6b727b;
+    --seq-1: #104281; --seq-2: #184f95; --seq-3: #1c5cab; --seq-4: #2a78d6; --seq-5: #5598e7; --seq-6: #86b6ef; --seq-7: #cde2fb;
+    --div-mid: #383835; --good-ink: #5fd35f; --bad-ink: #f08080;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121519; --panel: #1a1e23; --ink: #eef1f4; --ink-2: #b4bcc6; --ink-3: #8a929c;
+  --rule: #2c3239; --rule-2: #22272d; --accent: #e0aa3e; --accent-soft: #3a2f17; --nodata: #2a3037; --map-line: #121519;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s-other: #6b727b;
+  --seq-1: #104281; --seq-2: #184f95; --seq-3: #1c5cab; --seq-4: #2a78d6; --seq-5: #5598e7; --seq-6: #86b6ef; --seq-7: #cde2fb;
+  --div-mid: #383835; --good-ink: #5fd35f; --bad-ink: #f08080;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.45 var(--f-body); margin: 0; }
+.wrap { max-width: 1440px; margin: 0 auto; padding-inline: 20px; padding-block: 18px 48px; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 600; letter-spacing: 0.01em; text-wrap: balance; margin: 0; }
+.num, td.n, .kpi b, .mono { font-family: var(--f-data); font-variant-numeric: tabular-nums; }
+.eyebrow { font: 600 11px/1.2 var(--f-body); letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); }
+a { color: var(--accent); }
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* header */
+.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 32px; padding-bottom: 14px; border-bottom: 1px solid var(--rule); }
+.top h1 { font-size: 34px; line-height: 1; }
+.top h1 span { color: var(--accent); }
+.top .asof { color: var(--ink-3); font-size: 13px; }
+.kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); margin-block: 16px; }
+.kpi { background: var(--panel); padding: 12px 14px; min-width: 0; }
+.kpi b { display: block; font-size: 22px; font-weight: 500; margin-top: 4px; }
+.kpi small { color: var(--ink-3); font-size: 12.5px; }
+@media (max-width: 900px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* tabs */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--rule); margin-bottom: 16px; overflow-x: auto; }
+.tab { background: none; border: 0; padding: 10px 14px; font: 600 17px var(--f-display); letter-spacing: 0.02em; color: var(--ink-2); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+
+.controls { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin-bottom: 12px; }
+.controls label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--ink-3); }
+select, input[type="search"] { background: var(--panel); border: 1px solid var(--rule); border-radius: 4px; padding: 6px 8px; min-width: 0; max-width: 100%; }
+.chk { flex-direction: row !important; align-items: center; gap: 6px !important; font-size: 13.5px !important; color: var(--ink-2) !important; padding-top: 16px; }
+
+/* map tab */
+.mapgrid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 1000px) { .mapgrid { grid-template-columns: minmax(0, 1fr); } }
+.mapbox { background: var(--panel); border: 1px solid var(--rule); position: relative; }
+#map { display: block; width: 100%; height: auto; }
+#map path.nb { stroke: var(--map-line); stroke-width: 0.6; cursor: pointer; }
+#map path.nb:hover { stroke: var(--ink); stroke-width: 1.2; }
+#map path.nb.sel { stroke: var(--accent); stroke-width: 2.4; }
+#map path.nb.dim { opacity: 0.25; }
+#map path.plan { fill: none; stroke: var(--ink); stroke-width: 1; stroke-dasharray: 3 2; pointer-events: none; opacity: 0.7; }
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 12px; border-top: 1px solid var(--rule-2); font-size: 12.5px; color: var(--ink-2); }
+.ramp { display: flex; align-items: stretch; }
+.ramp div { display: flex; flex-direction: column; gap: 3px; font-family: var(--f-data); font-size: 11px; color: var(--ink-3); min-width: 0; }
+.ramp i { display: block; width: 38px; height: 10px; }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+
+/* neighbourhood file */
+.file { background: var(--panel); border: 1px solid var(--rule); padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.file header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; align-items: baseline; }
+.file h2 { font-size: 28px; line-height: 1.05; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--rule); color: var(--ink-2); white-space: nowrap; }
+.chip.dev { background: var(--accent-soft); border-color: transparent; color: var(--ink); }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; }
+.facts div { min-width: 0; }
+.facts b { display: block; font: 500 18px var(--f-data); font-variant-numeric: tabular-nums; }
+.facts small { color: var(--ink-3); font-size: 12px; display: block; line-height: 1.3; }
+@media (max-width: 520px) { .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.sect h3 { font-size: 17px; margin-bottom: 6px; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.sect h3 small { font: 400 12px var(--f-body); color: var(--ink-3); }
+.note { font-size: 12.5px; color: var(--ink-3); }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { fill: var(--ink-3); font: 11px var(--f-data); }
+.chart .grid line { stroke: var(--rule-2); }
+.chart .axis path, .chart .axis line { stroke: var(--rule); }
+.serieskey { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; color: var(--ink-2); margin-top: 4px; }
+
+.planrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 10px 0; border-top: 1px solid var(--rule-2); }
+.planrow:first-of-type { border-top: 0; }
+.planrow .meta { font-size: 12.5px; color: var(--ink-3); }
+.bar { position: relative; height: 10px; background: var(--rule-2); border-radius: 2px; grid-column: 1 / -1; overflow: hidden; }
+.bar i { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 2px; }
+.bar.over i { background: var(--s3); }
+.mix { display: flex; height: 16px; gap: 2px; margin-top: 4px; }
+.mix i { display: block; height: 100%; min-width: 0; }
+.mix i:first-child { border-radius: 3px 0 0 3px; } .mix i:last-child { border-radius: 0 3px 3px 0; }
+
+/* tables */
+.tablewrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--rule); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--rule-2); white-space: nowrap; }
+th { font: 600 11.5px var(--f-body); letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-3); position: sticky; top: 0; background: var(--panel); cursor: pointer; user-select: none; vertical-align: bottom; }
+th[aria-sort="ascending"]::after { content: " ▲"; } th[aria-sort="descending"]::after { content: " ▼"; }
+td.n, th.n { text-align: right; }
+tbody tr { cursor: pointer; }
+tbody tr:hover td { background: var(--rule-2); }
+td .mini { display: inline-block; width: 90px; height: 8px; background: var(--rule-2); border-radius: 2px; position: relative; vertical-align: middle; margin-left: 8px; overflow: hidden; }
+td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
+.flag { font-size: 12px; padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
+.flag.up { color: var(--good-ink); border: 1px solid currentColor; }
+.flag.down { color: var(--bad-ink); border: 1px solid currentColor; }
+.flag.even { color: var(--ink-3); border: 1px solid var(--rule); }
+.tablehead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 8px 16px; margin-block: 22px 8px; }
+.tablehead h2 { font-size: 22px; }
+.lede { max-width: 72ch; color: var(--ink-2); margin: 0 0 12px; }
+
+/* compare */
+.cmpgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+@media (max-width: 1000px) { .cmpgrid { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--panel); border: 1px solid var(--rule); padding: 14px 16px; min-width: 0; }
+.picks { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.pick { display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 10px; border: 1px solid var(--rule); border-radius: 999px; font-size: 13px; background: var(--panel); }
+.pick button { border: 0; background: none; cursor: pointer; color: var(--ink-3); padding: 0 6px; font-size: 15px; line-height: 1; }
+
+details.method { margin-top: 28px; background: var(--panel); border: 1px solid var(--rule); padding: 12px 16px; }
+details.method summary { cursor: pointer; font: 600 17px var(--f-display); }
+details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
+
+#tip { position: fixed; pointer-events: none; background: var(--panel); color: var(--ink); border: 1px solid var(--rule); box-shadow: 0 4px 16px rgb(0 0 0 / 0.14); padding: 8px 10px; font-size: 12.5px; border-radius: 4px; z-index: 10; max-width: 280px; }
+#tip b { font-family: var(--f-display); font-size: 15px; font-weight: 600; }
+#tip .r { display: flex; justify-content: space-between; gap: 14px; font-family: var(--f-data); font-size: 12px; }
+.loading { padding: 40px; color: var(--ink-3); }
+@media (prefers-reduced-motion: no-preference) { .bar i, td .mini i { transition: width 0.4s ease; } }
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <div>
+      <div class="eyebrow">City of Edmonton open data · neighbourhoods &amp; statutory plans</div>
+      <h1>Edmonton Growth <span>Monitor</span></h1>
+    </div>
+    <div class="asof" id="asof">Loading data…</div>
+  </div>
+  <div class="kpis" id="kpis"></div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-map" aria-selected="true" data-tab="map">Neighbourhood map</button>
+    <button class="tab" role="tab" id="tab-plans" aria-selected="false" data-tab="plans">Plan buildout</button>
+    <button class="tab" role="tab" id="tab-compare" aria-selected="false" data-tab="compare">Compare</button>
+    <button class="tab" role="tab" id="tab-table" aria-selected="false" data-tab="table">All neighbourhoods</button>
+  </div>
+
+  <section id="panel-map">
+    <div class="controls">
+      <label for="metric">Colour neighbourhoods by
+        <select id="metric"></select>
+      </label>
+      <label for="cls">Show
+        <select id="cls">
+          <option value="all">All neighbourhoods</option>
+          <option value="Developing">Developing</option>
+          <option value="Redeveloping">Redeveloping (mature &amp; established)</option>
+          <option value="Industrial">Industrial</option>
+        </select>
+      </label>
+      <label for="find">Find
+        <input type="search" id="find" list="nblist" placeholder="Neighbourhood name">
+        <datalist id="nblist"></datalist>
+      </label>
+      <label class="chk" for="showplans"><input type="checkbox" id="showplans" checked> Plan boundaries</label>
+    </div>
+    <div class="mapgrid">
+      <div class="mapbox">
+        <svg id="map" viewBox="0 0 800 760" role="img" aria-label="Map of Edmonton neighbourhoods"></svg>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div class="file" id="file"></div>
+    </div>
+    <div class="tablehead">
+      <div><h2>City-wide units permitted</h2><div class="note">Net new dwelling units on building permits issued, by building type. Current year is year-to-date.</div></div>
+      <div class="serieskey" id="citykey"></div>
+    </div>
+    <div class="card chart" id="citychart"></div>
+  </section>
+
+  <section id="panel-plans" hidden>
+    <p class="lede">Each approved neighbourhood plan (NSP / NASP) sets a buildout target in its Land Use &amp; Population Statistics table. This ledger sets those targets against the dwellings on the ground today, and compares the housing mix the plan assumed with the mix actually being permitted.</p>
+    <div class="controls">
+      <label for="plansort">Sort by
+        <select id="plansort">
+          <option value="recent">Units permitted, last 5 years</option>
+          <option value="buildout_pct">Buildout progress</option>
+          <option value="remaining_units">Units remaining</option>
+          <option value="units">Planned units</option>
+          <option value="upnrha">Planned density</option>
+          <option value="mixgap">Mix vs plan</option>
+        </select>
+      </label>
+      <label class="chk" for="plansactive"><input type="checkbox" id="plansactive"> Only plans still building out (under 90%)</label>
+    </div>
+    <div class="tablewrap"><table id="plantable"></table></div>
+    <div class="tablehead"><div><h2>Redevelopment plans (ARPs)</h2><div class="note">ARPs have no standard statistics table, so each is measured against the target it states: total units, new units since adoption, or residents at buildout.</div></div></div>
+    <div class="tablewrap"><table id="arptable"></table></div>
+    <div class="tablehead"><div><h2>Plans without buildout figures here</h2><div class="note">Area structure plans that roll up several NSPs, and industrial plans. Their boundaries still appear on the map.</div></div></div>
+    <div class="tablewrap"><table id="otherplans"></table></div>
+  </section>
+
+  <section id="panel-compare" hidden>
+    <div class="controls">
+      <label for="cmpadd">Add a neighbourhood (up to 4)
+        <input type="search" id="cmpadd" list="nblist" placeholder="Type a name">
+      </label>
+      <div class="picks" id="picks"></div>
+    </div>
+    <div class="cmpgrid">
+      <div class="card"><h3 style="font-size:18px;margin-bottom:8px">Key figures</h3><div style="overflow-x:auto"><table id="cmptable"></table></div></div>
+      <div class="card chart">
+        <h3 style="font-size:18px">Units permitted per year</h3>
+        <div class="serieskey" id="cmpkey"></div>
+        <div id="cmpchart"></div>
+        <h3 style="font-size:18px;margin-top:18px">Average residential assessment</h3>
+        <div id="cmpassess"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="panel-table" hidden>
+    <div class="controls">
+      <label for="tfind">Filter
+        <input type="search" id="tfind" placeholder="Name, ward or district">
+      </label>
+      <label for="tcls">Type
+        <select id="tcls">
+          <option value="all">All</option>
+          <option value="Developing">Developing</option>
+          <option value="Redeveloping">Redeveloping</option>
+          <option value="Industrial">Industrial</option>
+        </select>
+      </label>
+    </div>
+    <div class="tablewrap" style="max-height:70vh"><table id="nbtable"></table></div>
+  </section>
+
+  <details class="method">
+    <summary>Sources and method</summary>
+    <ul id="method"></ul>
+  </details>
+</div>
+<div id="tip" hidden></div>
+
+<script>
+(async function () {
+  const fmt = d3.format(",.0f"), fmt1 = d3.format(",.1f"), pct = v => v == null || !isFinite(v) ? "–" : (v > 0 ? "+" : "") + d3.format(".1f")(v) + "%";
+  const money = v => v >= 1e9 ? "$" + d3.format(".1f")(v / 1e9) + "B" : v >= 1e6 ? "$" + d3.format(".0f")(v / 1e6) + "M" : "$" + d3.format(",.0f")(v);
+  const dash = v => v == null || !isFinite(v) ? "–" : v;
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const tip = document.getElementById("tip");
+  function showTip(e, html) { tip.innerHTML = html; tip.hidden = false; const w = tip.offsetWidth, h = tip.offsetHeight; let x = e.clientX + 14, y = e.clientY + 14; if (x + w > innerWidth - 8) x = e.clientX - w - 14; if (y + h > innerHeight - 8) y = e.clientY - h - 14; tip.style.left = x + "px"; tip.style.top = y + "px"; }
+  function hideTip() { tip.hidden = true; }
+
+  let D, NB, PL;
+  try {
+    [D, NB, PL] = await Promise.all(["data/growth.json", "data/neighbourhoods.geojson", "data/plans.geojson"].map(u => fetch(u).then(r => { if (!r.ok) throw new Error(u); return r.json(); })));
+  } catch (err) {
+    document.getElementById("asof").textContent = "Could not load the data files. If you opened this file directly, start a local server in the edmonton-growth folder (python3 -m http.server) and open http://localhost:8000.";
+    return;
+  }
+
+  const CY = D.current_year, LY = CY - 1, W0 = LY - 4; // last five full years
+  const YEARS = d3.range(2009, CY + 1).map(String);
+  const nbs = D.neighbourhoods, byId = new Map(nbs.map(n => [n.id, n])), plans = D.plans;
+  const TYPES = [["single", "Single detached", "--s1"], ["semi", "Semi-detached", "--s2"], ["row", "Row house", "--s3"], ["apartment", "Apartment / mixed use", "--s4"], ["suitesall", "Suites & garden suites", "--s5"], ["other", "Other", "--s-other"]];
+  const yv = (n, y) => { const p = n.permits[y]; if (!p) return null; return { ...p, suitesall: (p.suite || 0) + (p.backyard || 0) }; };
+
+  // ---------- derived metrics per neighbourhood
+  for (const n of nbs) {
+    let u5 = 0, multi5 = 0, gross5 = 0;
+    for (let y = W0; y <= LY; y++) { const p = n.permits[y]; if (p) { u5 += p.units - p.demo; gross5 += p.units; multi5 += p.row + p.apartment; } }
+    n.u5 = u5; n.multi5 = gross5 > 0 ? 100 * multi5 / gross5 : null; n.gross5 = gross5;
+    n.ytd = n.permits[CY] ? n.permits[CY].units - n.permits[CY].demo : 0;
+    n.growth5 = n.dwell["2021"] > 50 ? 100 * u5 / n.dwell["2021"] : null;
+    n.pop1621 = n.pop["2016"] > 100 && n.pop["2021"] ? 100 * (n.pop["2021"] / n.pop["2016"] - 1) : null;
+    const a0 = n.assess[String(CY - 5)], a1 = n.assess[String(CY)];
+    n.avg_now = a1 && a1.res_n > 20 ? a1.res_v / a1.res_n : null;
+    n.avgchg5 = a0 && a1 && a0.res_n > 20 && a1.res_n > 20 ? 100 * ((a1.res_v / a1.res_n) / (a0.res_v / a0.res_n) - 1) : null;
+    n.basechg5 = a0 && a1 && a0.tot_v > 0 ? 100 * (a1.tot_v / a0.tot_v - 1) : null;
+    n.tot_now = a1 ? a1.tot_v : null;
+    const pp = n.primary_plan != null ? plans[n.primary_plan] : null;
+    n.buildout = pp ? pp.buildout_pct : null;
+    n.cls = n.class === "Redeveloping" || n.class === "Developing" || n.class === "Industrial" ? n.class : "Other";
+  }
+  for (const p of plans) {
+    p.recent = 0;
+    for (let y = W0; y <= LY; y++) if (p.permits[y]) p.recent += p.permits[y].units - p.permits[y].demo;
+    if (p.target && p.recent_ldr_pct != null && p.target.ldr_pct != null) p.mixgap = p.target.ldr_pct - p.recent_ldr_pct;
+  }
+
+  // ---------- header
+  const sumY = (y, k = "units") => d3.sum(nbs, n => n.permits[y] ? n.permits[y][k] : 0);
+  const totVal = d3.sum(nbs, n => n.tot_now || 0);
+  const tracked = plans.filter(p => p.target && p.target.units && !p.arp);
+  const arps = plans.filter(p => p.arp);
+  const remaining = d3.sum(tracked, p => p.remaining_units || 0);
+  document.getElementById("asof").innerHTML = `Data refreshed <span class="mono">${D.generated.replace("T", " ")}</span>`;
+  document.getElementById("kpis").innerHTML = [
+    [fmt(d3.sum(nbs, n => n.pop["2021"] || 0)), "Population, 2021 federal census"],
+    [fmt(sumY(String(LY)) - sumY(String(LY), "demo")), `Net units permitted in ${LY}`],
+    [fmt(sumY(String(CY)) - sumY(String(CY), "demo")), `Net units permitted ${CY} year to date`],
+    [money(totVal), `Total assessed value, ${CY} roll`],
+    [fmt(remaining), `Units left to build in ${tracked.length} approved neighbourhood plans`],
+  ].map(([v, l]) => `<div class="kpi"><small>${l}</small><b>${v}</b></div>`).join("");
+
+  // ---------- tabs (deep link with #map / #plans / #compare / #table)
+  const tabs = [...document.querySelectorAll(".tab")];
+  function setTab(t) {
+    tabs.forEach(b => b.setAttribute("aria-selected", b.dataset.tab === t));
+    ["map", "plans", "compare", "table"].forEach(k => document.getElementById("panel-" + k).hidden = k !== t);
+    try { localStorage.setItem("egm-tab", t); } catch (e) {}
+    if (t === "compare") renderCompare();
+  }
+  tabs.forEach(b => b.addEventListener("click", () => setTab(b.dataset.tab)));
+
+  document.getElementById("nblist").innerHTML = nbs.map(n => `<option value="${n.name}">`).join("");
+
+  // ---------- map
+  const METRICS = [
+    { k: "u5", label: `Net units permitted ${W0}–${LY}`, f: fmt, seq: true },
+    { k: "growth5", label: `Units permitted ${W0}–${LY} as % of 2021 dwellings`, f: v => d3.format(".1f")(v) + "%", seq: true },
+    { k: "ytd", label: `Net units permitted ${CY} YTD`, f: fmt, seq: true },
+    { k: "multi5", label: `Row & apartment share of units ${W0}–${LY}`, f: v => d3.format(".0f")(v) + "%", seq: true, min: 5 },
+    { k: "density_du_ha_est", label: "Dwellings per gross hectare (est. today)", f: fmt1, seq: true },
+    { k: "density_pop_ha", label: "People per gross hectare (2021)", f: fmt1, seq: true },
+    { k: "pop1621", label: "Population change 2016–2021", f: v => pct(v), div: true },
+    { k: "avgchg5", label: `Avg residential assessment change ${CY - 5}–${CY}`, f: v => pct(v), div: true },
+    { k: "buildout", label: "Buildout of neighbourhood plan (%)", f: v => d3.format(".0f")(v) + "%", seq: true, fixed: [0, 25, 50, 75, 90, 100] },
+  ];
+  const msel = document.getElementById("metric");
+  msel.innerHTML = METRICS.map((m, i) => `<option value="${i}">${m.label}</option>`).join("");
+
+  const svg = d3.select("#map");
+  const proj = d3.geoMercator().fitExtent([[10, 10], [790, 750]], NB);
+  const path = d3.geoPath(proj);
+  const gN = svg.append("g"), gP = svg.append("g");
+  const nbPaths = gN.selectAll("path").data(NB.features).join("path").attr("class", "nb").attr("d", path)
+    .on("mousemove", (e, f) => { const n = byId.get(f.properties.id); const m = METRICS[+msel.value]; const v = n[m.k];
+      showTip(e, `<b>${n.name}</b><div class="note">${n.class}</div><div class="r"><span>${m.label}</span><span>${v == null ? "no data" : m.f(v)}</span></div>`); })
+    .on("mouseleave", hideTip)
+    .on("click", (e, f) => select(f.properties.id));
+  gP.selectAll("path").data(PL.features).join("path").attr("class", "plan").attr("d", path);
+  document.getElementById("showplans").addEventListener("change", e => gP.attr("display", e.target.checked ? null : "none"));
+
+  const SEQ = ["--seq-1", "--seq-2", "--seq-3", "--seq-4", "--seq-5", "--seq-6", "--seq-7"];
+  function paint() {
+    const m = METRICS[+msel.value], cls = document.getElementById("cls").value;
+    const vis = n => cls === "all" || n.cls === cls;
+    const vals = nbs.filter(n => vis(n) && n[m.k] != null && isFinite(n[m.k]) && (!m.seq || n[m.k] > 0) && (m.k !== "multi5" || n.gross5 >= 10)).map(n => n[m.k]);
+    let color, legendHTML;
+    if (m.div) {
+      const ext = d3.quantile(vals.map(Math.abs).sort(d3.ascending), 0.95) || 1;
+            color = v => { const i = v < -ext / 2 ? 0 : v < -ext / 6 ? 1 : v <= ext / 6 ? 2 : v <= ext / 2 ? 3 : v <= ext ? 4 : 5; return [css("--div-neg"), "color-mix(in oklab, " + css("--div-neg") + " 45%, " + css("--div-mid") + ")", css("--div-mid"), css("--seq-3"), css("--seq-5"), css("--seq-7")][i]; };
+      const labs = [`< ${pct(-ext / 2)}`, `${pct(-ext / 2)} to ${pct(-ext / 6)}`, `±${d3.format(".1f")(ext / 6)}%`, `to ${pct(ext / 2)}`, `to ${pct(ext)}`, `> ${pct(ext)}`];
+      legendHTML = `<div class="ramp">${labs.map((l, i) => `<div><i style="background:${color([-ext, -ext / 3, 0, ext / 3, ext * 0.8, ext * 2][i])}"></i>${l}</div>`).join("")}</div>`;
+    } else {
+      const br = m.fixed ? m.fixed.slice(1) : [0.15, 0.3, 0.45, 0.6, 0.75, 0.9].map(q => d3.quantile(vals.slice().sort(d3.ascending), q));
+      const t = d3.scaleThreshold().domain(br).range(SEQ.map(css));
+      color = v => t(v);
+      const edges = [d3.min(vals), ...br];
+      legendHTML = `<div class="ramp">${SEQ.map((c, i) => `<div><i style="background:${css(c)}"></i>${i === 0 ? "" : m.f(edges[i])}</div>`).join("")}</div>`;
+    }
+    nbPaths.attr("fill", f => { const n = byId.get(f.properties.id); const v = n[m.k]; if (v == null || !isFinite(v) || (m.seq && v <= 0) || (m.k === "multi5" && n.gross5 < 10)) return css("--nodata"); return color(v); })
+      .classed("dim", f => !vis(byId.get(f.properties.id)));
+    document.getElementById("legend").innerHTML = `<span>${m.label}</span>${legendHTML}<span><i class="sw" style="background:var(--nodata)"></i>No data / none</span><span><i class="sw" style="border:1px dashed var(--ink);background:none"></i>Statutory plan</span>`;
+  }
+  msel.addEventListener("change", () => { paint(); try { localStorage.setItem("egm-metric", msel.value); } catch (e) {} });
+  document.getElementById("cls").addEventListener("change", paint);
+
+  // ---------- charts
+  function stackedBars(el, rows, opts = {}) {
+    // rows: [{y, single, semi, ...}] ; draws stacked bars by TYPES
+    const W = opts.w || 640, H = opts.h || 200, m = { t: 8, r: 8, b: 22, l: 44 };
+    const x = d3.scaleBand().domain(rows.map(r => r.y)).range([m.l, W - m.r]).padding(0.22);
+    const ymax = d3.max(rows, r => d3.sum(TYPES, t => r[t[0]] || 0)) || 1;
+    const y = d3.scaleLinear().domain([0, ymax]).nice(4).range([H - m.b, m.t]);
+    const s = d3.select(el).html("").append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("role", "img").attr("aria-label", opts.aria || "Units permitted by year");
+    s.append("g").attr("class", "grid").selectAll("line").data(y.ticks(4)).join("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", d => y(d)).attr("y2", d => y(d));
+    s.append("g").selectAll("text").data(y.ticks(4)).join("text").attr("x", m.l - 6).attr("y", d => y(d) + 4).attr("text-anchor", "end").text(d => d3.format("~s")(d));
+    const every = Math.ceil(rows.length / (W / 46));
+    s.append("g").selectAll("text").data(rows.filter((r, i) => i % every === 0 || i === rows.length - 1)).join("text").attr("x", r => x(r.y) + x.bandwidth() / 2).attr("y", H - 6).attr("text-anchor", "middle").text(r => r.y === String(CY) ? r.y + "*" : "'" + r.y.slice(2));
+    const g = s.append("g");
+    for (const r of rows) {
+      let acc = 0; const segs = TYPES.map(t => { const v = r[t[0]] || 0; const s0 = acc; acc += v; return { t, v, s0, s1: acc }; }).filter(d => d.v > 0);
+      segs.forEach((d, i) => {
+        const top = i === segs.length - 1, y0 = y(d.s0), y1 = y(d.s1), h = Math.max(0, y0 - y1 - (i > 0 ? 2 : 0));
+        if (h <= 0) return;
+        g.append("path").attr("fill", css(d.t[2])).attr("opacity", r.y === String(CY) ? 0.6 : 1)
+          .attr("d", top ? roundTop(x(r.y), y1, x.bandwidth(), h, Math.min(3, h)) : `M${x(r.y)},${y1}h${x.bandwidth()}v${h}h${-x.bandwidth()}Z`);
+      });
+      g.append("rect").attr("x", x(r.y) - 2).attr("width", x.bandwidth() + 4).attr("y", m.t).attr("height", H - m.b - m.t).attr("fill", "transparent")
+        .on("mousemove", e => showTip(e, `<b>${r.y}${r.y === String(CY) ? " (year to date)" : ""}</b>` + TYPES.filter(t => r[t[0]]).map(t => `<div class="r"><span><i class="sw" style="background:var(${t[2]})"></i>${t[1]}</span><span>${fmt(r[t[0]])}</span></div>`).join("") + `<div class="r"><span>Total</span><span>${fmt(d3.sum(TYPES, t => r[t[0]] || 0))}</span></div>` + (r.demo ? `<div class="r"><span>Units demolished</span><span>${fmt(r.demo)}</span></div>` : "")))
+        .on("mouseleave", hideTip);
+    }
+  }
+  function roundTop(x, y, w, h, r) { return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`; }
+  function keyHTML() { return TYPES.map(t => `<span><i class="sw" style="background:var(${t[2]})"></i>${t[1]}</span>`).join(""); }
+
+  function lineChart(el, series, opts = {}) {
+    // series: [{name, color, pts:[{x, v}]}]
+    const W = opts.w || 640, H = opts.h || 200, m = { t: 10, r: 12, b: 22, l: 52 };
+    const xs = [...new Set(series.flatMap(s => s.pts.map(p => p.x)))].sort();
+    const x = d3.scalePoint().domain(xs).range([m.l, W - m.r]);
+    const vals = series.flatMap(s => s.pts.map(p => p.v)).filter(v => v != null);
+    const y = d3.scaleLinear().domain([opts.zero ? 0 : d3.min(vals) * 0.95, d3.max(vals) || 1]).nice(4).range([H - m.b, m.t]);
+    const s = d3.select(el).html("").append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("role", "img").attr("aria-label", opts.aria || "Line chart");
+    s.append("g").attr("class", "grid").selectAll("line").data(y.ticks(4)).join("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", d => y(d)).attr("y2", d => y(d));
+    s.append("g").selectAll("text").data(y.ticks(4)).join("text").attr("x", m.l - 6).attr("y", d => y(d) + 4).attr("text-anchor", "end").text(opts.yf || d3.format("~s"));
+    const every = Math.ceil(xs.length / (W / 46));
+    s.append("g").selectAll("text").data(xs.filter((d, i) => i % every === 0 || i === xs.length - 1)).join("text").attr("x", d => x(d)).attr("y", H - 6).attr("text-anchor", "middle").text(d => "'" + String(d).slice(2));
+    for (const sr of series) {
+      const pts = sr.pts.filter(p => p.v != null);
+      s.append("path").attr("fill", "none").attr("stroke", sr.color).attr("stroke-width", 2).attr("stroke-linejoin", "round").attr("d", d3.line().x(p => x(p.x)).y(p => y(p.v))(pts));
+      const last = pts[pts.length - 1];
+      if (last) s.append("circle").attr("cx", x(last.x)).attr("cy", y(last.v)).attr("r", 4).attr("fill", sr.color).attr("stroke", css("--panel")).attr("stroke-width", 2);
+    }
+    const cross = s.append("line").attr("y1", m.t).attr("y2", H - m.b).attr("stroke", css("--ink-3")).attr("stroke-dasharray", "2 2").attr("display", "none");
+    s.append("rect").attr("x", m.l).attr("y", m.t).attr("width", W - m.l - m.r).attr("height", H - m.t - m.b).attr("fill", "transparent")
+      .on("mousemove", function (e) {
+        const [mx] = d3.pointer(e, this); const xi = xs.reduce((a, b) => Math.abs(x(b) - mx) < Math.abs(x(a) - mx) ? b : a);
+        cross.attr("x1", x(xi)).attr("x2", x(xi)).attr("display", null);
+        showTip(e, `<b>${xi}</b>` + series.map(sr => { const p = sr.pts.find(p => p.x === xi); return `<div class="r"><span><i class="sw" style="background:${sr.color}"></i>${sr.name}</span><span>${p && p.v != null ? (opts.tf || fmt)(p.v) : "–"}</span></div>`; }).join(""));
+      })
+      .on("mouseleave", () => { cross.attr("display", "none"); hideTip(); });
+  }
+
+  // city chart
+  const cityRows = YEARS.map(y => { const r = { y, demo: 0 }; for (const t of TYPES) r[t[0]] = 0; for (const n of nbs) { const p = yv(n, y); if (p) { for (const t of TYPES) r[t[0]] += p[t[0]] || 0; r.demo += p.demo; } } return r; });
+  stackedBars(document.getElementById("citychart"), cityRows, { w: 1200, h: 260, aria: "City-wide units permitted per year by building type" });
+  document.getElementById("citykey").innerHTML = keyHTML();
+
+  // ---------- neighbourhood file
+  let selected = null;
+  function select(id) {
+    selected = id; const n = byId.get(id); if (!n) return;
+    nbPaths.classed("sel", f => f.properties.id === id);
+    nbPaths.filter(f => f.properties.id === id).raise();
+    try { localStorage.setItem("egm-nb", id); } catch (e) {}
+    const f = document.getElementById("file");
+    const ha = n.area_ha, d21 = n.dwell["2021"];
+    const lastA = n.assess[String(CY)];
+    const t21 = n.types_2021 || {};
+    const mixT = [["single", "Single detached", "--s1"], ["semi", "Semi", "--s2"], ["row", "Row", "--s3"], ["apt_low", "Apt < 5 storeys", "--s4"], ["apt_high", "Apt 5+ storeys", "--s5"], ["duplex", "Duplex flat", "--s-other"]];
+    const mixTot = d3.sum(mixT, t => t21[t[0]] || 0) + (t21.other || 0) + (t21.movable || 0);
+    const linked = n.plans.slice().sort((a, b) => b.share - a.share);
+    f.innerHTML = `
+      <header>
+        <div><div class="eyebrow">Neighbourhood ${n.id} · ${n.district || ""} district · ${n.ward || ""} ward</div><h2>${n.name}</h2></div>
+        <div class="chips"><span class="chip ${n.class === "Developing" ? "dev" : ""}">${n.class}</span><span class="chip">${fmt(ha)} ha</span></div>
+      </header>
+      <div class="facts">
+        <div><small>Population 2021</small><b>${n.pop["2021"] ? fmt(n.pop["2021"]) : "–"}</b><small>${n.pop1621 != null ? pct(n.pop1621) + " since 2016" : ""}</small></div>
+        <div><small>Dwellings 2021 → est. today</small><b>${d21 ? fmt(d21) + " → " + fmt(n.dwell_est_now) : "–"}</b><small>occupied private dwellings + net permits</small></div>
+        <div><small>Density today</small><b>${n.density_du_ha_est ? fmt1(n.density_du_ha_est) : "–"}</b><small>dwellings per gross ha</small></div>
+        <div><small>Net units ${W0}–${LY}</small><b>${fmt(n.u5)}</b><small>${n.growth5 != null ? d3.format(".1f")(n.growth5) + "% of 2021 stock" : ""}</small></div>
+        <div><small>Units ${CY} YTD</small><b>${fmt(n.ytd)}</b><small>${n.multi5 != null && n.gross5 >= 10 ? d3.format(".0f")(n.multi5) + "% row/apt since " + W0 : ""}</small></div>
+        <div><small>Avg residential assessment</small><b>${n.avg_now ? money(n.avg_now) : "–"}</b><small>${n.avgchg5 != null ? pct(n.avgchg5) + " over 5 yrs" : ""}${lastA ? " · base " + money(lastA.tot_v) : ""}</small></div>
+      </div>
+      <div class="sect chart"><h3>Units permitted by year <small>hover a bar for detail</small></h3><div id="nbbars"></div><div class="serieskey">${keyHTML()}</div></div>
+      ${mixTot ? `<div class="sect"><h3>Housing mix, 2021 census <small>${fmt(mixTot)} occupied dwellings</small></h3>
+        <div class="mix">${mixT.filter(t => t21[t[0]]).map(t => `<i style="flex:${t21[t[0]]};background:var(${t[2]})" title="${t[1]}: ${fmt(t21[t[0]])}"></i>`).join("")}</div>
+        <div class="serieskey">${mixT.filter(t => t21[t[0]]).map(t => `<span><i class="sw" style="background:var(${t[2]})"></i>${t[1]} ${d3.format(".0f")(100 * t21[t[0]] / mixTot)}%</span>`).join("")}</div></div>` : ""}
+      <div class="sect chart"><h3>Average residential assessment <small>per account, ${2012}–${CY}</small></h3><div id="nbassess"></div></div>
+      <div class="sect"><h3>Statutory plans <small>${linked.length ? "share of neighbourhood covered" : ""}</small></h3>
+        ${linked.length ? linked.map(l => planRow(plans[l.plan], l.share)).join("") : `<div class="note">No statutory plan in effect covers this neighbourhood. Mature areas are guided by the City Plan, district plans and the zoning bylaw.</div>`}
+      </div>
+      ${n.census_note ? `<div class="note">${n.census_note}.</div>` : ""}`;
+    stackedBars(document.getElementById("nbbars"), YEARS.map(y => ({ y, ...(yv(n, y) || {}) })), { w: 560, h: 170, aria: `Units permitted per year in ${n.name}` });
+    const ap = Object.entries(n.assess).filter(([y, a]) => a.res_n > 20).map(([y, a]) => ({ x: y, v: a.res_v / a.res_n }));
+    if (ap.length > 1) lineChart(document.getElementById("nbassess"), [{ name: n.name, color: css("--accent"), pts: ap }], { w: 560, h: 150, yf: v => "$" + d3.format("~s")(v), tf: v => money(v), aria: `Average residential assessment in ${n.name}` });
+    else document.getElementById("nbassess").innerHTML = `<div class="note">Too few residential accounts to chart.</div>`;
+  }
+  function arpTarget(a) {
+    if (a.measure === "units") return `${fmt(a.value)} units at buildout`;
+    if (a.measure === "new_units") return `${fmt(a.value)} new units from ${a.baseline_year}${a.value_likely ? ` (likely ${fmt(a.value_likely)})` : ""}${a.pop ? `; ${fmt(a.pop)} residents by ${a.pop_year}` : ""}`;
+    if (a.measure === "pop") return `${fmt(a.value)}${a.value_high ? "–" + fmt(a.value_high) : ""} residents at buildout`;
+    return "No numeric target";
+  }
+  function arpCurrent(p) {
+    const a = p.arp;
+    if (a.measure === "new_units") return `${fmt(a.current)} net units permitted since ${a.baseline_year}` + (a.pop ? `; ${fmt(a.pop_now)} residents in 2021` : "");
+    if (a.measure === "pop") return `${fmt(a.current)} residents in 2021 (census)`;
+    if (a.measure === "units") return `Est. ${fmt(a.current)} dwellings today`;
+    return "";
+  }
+  function planRow(p, share) {
+    const t = p.target;
+    let body = `<div><b>${p.name}</b> <span class="meta">${p.type_descr}${p.bylaw ? " · Bylaw " + p.bylaw : ""}</span></div>
+      <div class="meta">${share != null ? d3.format(".0%")(share) + " of area" : ""}${p.pdf ? ` · <a href="${encodeURI(p.pdf)}" target="_blank" rel="noopener">Plan PDF</a>` : ""}</div>`;
+    if (p.arp) {
+      body += `<div class="meta" style="grid-column:1/-1">${p.arp.stated}</div>` + (p.arp.measure ? `<div class="meta">${arpCurrent(p)}</div><div class="meta num">${fmt1(p.arp.progress_pct)}%</div>
+        <div class="bar"><i style="width:${Math.min(100, p.arp.progress_pct)}%"></i></div>` : "");
+    } else if (t && t.units) {
+      body += `<div class="meta">Planned ${fmt(t.units)} units${t.pop ? " · " + fmt(t.pop) + " people" : ""} · ${t.upnrha} units/net res. ha · ${t.ldr_pct}% low density</div>
+        <div class="meta num">${fmt1(p.buildout_pct)}% built</div>
+        <div class="bar ${p.buildout_pct > 100 ? "over" : ""}"><i style="width:${Math.min(100, p.buildout_pct)}%"></i></div>
+        ${t.note ? `<div class="meta" style="grid-column:1/-1">${t.note}</div>` : ""}
+        <div class="meta" style="grid-column:1/-1">Est. ${fmt(p.dwell_est_now)} dwellings today · ${fmt(p.remaining_units)} units to go${p.recent_ldr_pct != null ? ` · units permitted since 2015 were ${d3.format(".0f")(p.recent_ldr_pct)}% single/semi` : ""}</div>`;
+    }
+    return `<div class="planrow">${body}</div>`;
+  }
+
+  // find box
+  const nameToId = new Map(nbs.map(n => [n.name.toLowerCase(), n.id]));
+  document.getElementById("find").addEventListener("change", e => { const id = nameToId.get(e.target.value.toLowerCase()); if (id) select(id); });
+
+  // ---------- plans ledger
+  const planSort = document.getElementById("plansort"), planActive = document.getElementById("plansactive");
+  function mixFlag(p) {
+    if (p.mixgap == null || p.recent_units < 50) return `<span class="flag even">too few permits</span>`;
+    if (p.mixgap > 10) return `<span class="flag up">▲ denser than plan</span>`;
+    if (p.mixgap < -10) return `<span class="flag down">▼ less dense than plan</span>`;
+    return `<span class="flag even">≈ on plan</span>`;
+  }
+  function renderPlans() {
+    const key = planSort.value;
+    const val = p => key === "units" ? p.target.units : key === "upnrha" ? p.target.upnrha : key === "mixgap" ? (p.mixgap ?? -999) : key === "recent" ? p.recent : p[key];
+    const rows = tracked.filter(p => !planActive.checked || p.buildout_pct < 90).sort((a, b) => key === "buildout_pct" ? d3.ascending(val(a), val(b)) : d3.descending(val(a), val(b)));
+    const nbNames = p => p.nbhds.filter(x => x.share > 0.1).map(x => byId.get(x.id)?.name).filter(Boolean).slice(0, 3).join(", ");
+    document.getElementById("plantable").innerHTML = `<thead><tr><th>Plan</th><th>Type</th><th class="n">Stats bylaw</th><th class="n">Planned units</th><th class="n">Est. today</th><th>Buildout</th><th class="n">To build</th><th class="n">Units ${W0}–${LY}</th><th class="n">Planned du/nrha</th><th class="n">Plan low-density %</th><th class="n">Permitted single/semi % since 2015</th><th>Mix vs plan</th><th></th></tr></thead><tbody>` +
+      rows.map(p => `<tr data-nb="${p.nbhds.slice().sort((a, b) => b.share - a.share)[0]?.id || ""}"><td><b>${p.name}</b><div class="note">${nbNames(p)}</div></td><td>${p.type}</td><td class="n" ${p.target.note ? `title="${p.target.note}"` : ""}>${p.target.note ? "derived*" : (p.target.stats_bylaw || "–") + (p.target.stats_year ? " (" + p.target.stats_year + ")" : "")}</td><td class="n">${fmt(p.target.units)}</td><td class="n">${fmt(p.dwell_est_now)}</td>
+        <td class="n">${d3.format(".0f")(Math.max(0, p.buildout_pct))}%<span class="mini"><i style="width:${Math.max(0, Math.min(100, p.buildout_pct))}%"></i></span></td><td class="n">${fmt(p.remaining_units)}</td><td class="n">${fmt(p.recent)}</td><td class="n">${p.target.upnrha}</td><td class="n">${dash(p.target.ldr_pct)}</td><td class="n">${p.recent_ldr_pct != null ? d3.format(".0f")(p.recent_ldr_pct) : "–"}</td><td>${mixFlag(p)}</td>
+        <td><a href="${encodeURI(p.pdf)}" target="_blank" rel="noopener">PDF</a></td></tr>`).join("") + "</tbody>";
+    document.querySelectorAll("#plantable tbody tr").forEach(tr => tr.addEventListener("click", e => { if (e.target.tagName === "A") return; if (tr.dataset.nb) { setTab("map"); select(tr.dataset.nb); } }));
+  }
+  planSort.addEventListener("change", renderPlans); planActive.addEventListener("change", renderPlans);
+  renderPlans();
+  document.getElementById("arptable").innerHTML = `<thead><tr><th>Plan</th><th class="n">Adopted</th><th>Target as stated</th><th>Where it stands</th><th>Progress</th><th class="n">Units ${W0}–${LY}</th><th></th></tr></thead><tbody>` +
+    arps.sort((a, b) => d3.descending(a.arp.progress_pct ?? -1, b.arp.progress_pct ?? -1)).map(p => {
+      const a = p.arp, pc = a.progress_pct;
+      const yrs = a.measure === "new_units" && a.horizon_years ? ` · ${CY - a.baseline_year} of ${a.horizon_years} yrs elapsed (${d3.format(".0f")(100 * (CY - a.baseline_year) / a.horizon_years)}%)` : "";
+      return `<tr data-nb="${p.nbhds.slice().sort((x, y) => y.share - x.share)[0]?.id || ""}"><td><b>${p.name}</b><div class="note" style="white-space:normal;max-width:38ch">${a.stated}</div></td><td class="n">${a.adopted || "–"}</td><td style="white-space:normal;max-width:30ch">${arpTarget(a)}</td><td style="white-space:normal;max-width:30ch">${arpCurrent(p)}${yrs}</td>
+        <td class="n">${pc != null ? d3.format(".0f")(pc) + "%" : "–"}<span class="mini"><i style="width:${Math.max(0, Math.min(100, pc || 0))}%"></i></span></td><td class="n">${fmt(p.recent)}</td><td>${p.pdf ? `<a href="${encodeURI(p.pdf)}" target="_blank" rel="noopener">PDF</a>` : ""}</td></tr>`;
+    }).join("") + "</tbody>";
+  document.querySelectorAll("#arptable tbody tr").forEach(tr => tr.addEventListener("click", e => { if (e.target.tagName === "A") return; if (tr.dataset.nb) { setTab("map"); select(tr.dataset.nb); } }));
+  const others = plans.filter(p => !(p.target && p.target.units) && !p.arp).sort((a, b) => d3.ascending(a.type + a.name, b.type + b.name));
+  document.getElementById("otherplans").innerHTML = `<thead><tr><th>Plan</th><th>Type</th><th class="n">Area (ha)</th><th class="n">Est. dwellings today</th><th class="n">Units ${W0}–${LY}</th><th></th></tr></thead><tbody>` +
+    others.map(p => `<tr><td><b>${p.name}</b></td><td>${p.type_descr}</td><td class="n">${fmt(p.area_ha)}</td><td class="n">${fmt(p.dwell_est_now)}</td><td class="n">${fmt(p.recent)}</td><td>${p.pdf ? `<a href="${encodeURI(p.pdf)}" target="_blank" rel="noopener">PDF</a>` : ""}</td></tr>`).join("") + "</tbody>";
+
+  // ---------- compare
+  let picks = [];
+  try { picks = JSON.parse(localStorage.getItem("egm-picks") || "null") || []; } catch (e) {}
+  if (!picks.length) picks = ["Windermere", "Walker", "Downtown", "Ritchie"].map(nm => nameToId.get(nm.toLowerCase())).filter(Boolean);
+  const SL = ["--s1", "--s2", "--s3", "--s4"];
+  const cmpIn = document.getElementById("cmpadd");
+  cmpIn.addEventListener("change", e => { const id = nameToId.get(e.target.value.toLowerCase()); if (id && !picks.includes(id) && picks.length < 4) { picks.push(id); e.target.value = ""; renderCompare(); } });
+  function renderCompare() {
+    try { localStorage.setItem("egm-picks", JSON.stringify(picks)); } catch (e) {}
+    // colours follow the pick slot, so removing one doesn't repaint the others' meaning mid-session
+    const ns = picks.map(id => byId.get(id));
+    document.getElementById("picks").innerHTML = ns.map((n, i) => `<span class="pick"><i class="sw" style="background:var(${SL[i]})"></i>${n.name}<button aria-label="Remove ${n.name}" data-i="${i}">×</button></span>`).join("");
+    document.querySelectorAll("#picks button").forEach(b => b.addEventListener("click", () => { picks.splice(+b.dataset.i, 1); renderCompare(); }));
+    const rowsDef = [
+      ["Type", n => n.class], ["Area (ha)", n => fmt(n.area_ha)], ["Population 2021", n => n.pop["2021"] ? fmt(n.pop["2021"]) : "–"], ["Pop. change 2016–21", n => pct(n.pop1621)],
+      ["Dwellings 2021", n => n.dwell["2021"] ? fmt(n.dwell["2021"]) : "–"], ["Dwellings est. today", n => n.dwell_est_now ? fmt(n.dwell_est_now) : "–"],
+      ["Dwellings / gross ha", n => n.density_du_ha_est ? fmt1(n.density_du_ha_est) : "–"], ["People / gross ha (2021)", n => n.density_pop_ha ? fmt1(n.density_pop_ha) : "–"],
+      [`Net units ${W0}–${LY}`, n => fmt(n.u5)], [`Growth ${W0}–${LY} (% of stock)`, n => n.growth5 != null ? d3.format(".1f")(n.growth5) + "%" : "–"],
+      [`Row/apt share ${W0}–${LY}`, n => n.multi5 != null && n.gross5 >= 10 ? d3.format(".0f")(n.multi5) + "%" : "–"],
+      ["Avg res. assessment", n => n.avg_now ? money(n.avg_now) : "–"], ["5-yr assessment change", n => pct(n.avgchg5)],
+      ["Primary plan", n => n.primary_plan != null ? plans[n.primary_plan].name : "–"], ["Plan density target", n => n.primary_plan != null ? (plans[n.primary_plan].target.upnrha ? plans[n.primary_plan].target.upnrha + " du/nrha" : "–") : "–"],
+      ["Plan buildout", n => n.buildout != null ? d3.format(".0f")(n.buildout) + "%" : "–"],
+    ];
+    document.getElementById("cmptable").innerHTML = `<thead><tr><th></th>${ns.map((n, i) => `<th class="n"><i class="sw" style="background:var(${SL[i]})"></i>${n.name}</th>`).join("")}</tr></thead><tbody>` +
+      rowsDef.map(([l, f]) => `<tr style="cursor:default"><td>${l}</td>${ns.map(n => `<td class="n">${f(n)}</td>`).join("")}</tr>`).join("") + "</tbody>";
+    document.getElementById("cmpkey").innerHTML = ns.map((n, i) => `<span><i class="sw" style="background:var(${SL[i]})"></i>${n.name}</span>`).join("");
+    if (!ns.length) { document.getElementById("cmpchart").innerHTML = document.getElementById("cmpassess").innerHTML = `<div class="note">Add a neighbourhood to compare.</div>`; return; }
+    lineChart(document.getElementById("cmpchart"), ns.map((n, i) => ({ name: n.name, color: css(SL[i]), pts: YEARS.map(y => ({ x: y, v: n.permits[y] ? n.permits[y].units - n.permits[y].demo : 0 })) })), { w: 600, h: 220, zero: true, aria: "Units permitted per year, compared" });
+    lineChart(document.getElementById("cmpassess"), ns.map((n, i) => ({ name: n.name, color: css(SL[i]), pts: Object.entries(n.assess).map(([y, a]) => ({ x: y, v: a.res_n > 20 ? a.res_v / a.res_n : null })) })), { w: 600, h: 200, yf: v => "$" + d3.format("~s")(v), tf: money, aria: "Average residential assessment, compared" });
+  }
+
+  // ---------- all-neighbourhood table
+  const COLS = [
+    ["name", "Neighbourhood", n => n.name, false], ["class", "Type", n => n.class, false], ["ward", "Ward", n => n.ward || "", false],
+    ["pop21", "Pop. 2021", n => n.pop["2021"] ?? null, true], ["pop1621", "Pop. Δ 16–21", n => n.pop1621, true, pct],
+    ["dw", "Dwellings est.", n => n.dwell_est_now, true], ["dha", "Dw / gross ha", n => n.density_du_ha_est, true, fmt1],
+    ["u5", `Net units ${W0}–${LY}`, n => n.u5, true], ["ytd", `${CY} YTD`, n => n.ytd, true],
+    ["multi5", "Row/apt %", n => n.gross5 >= 10 ? n.multi5 : null, true, v => d3.format(".0f")(v) + "%"],
+    ["avg", "Avg res. assessment", n => n.avg_now, true, money], ["avgchg5", "5-yr Δ", n => n.avgchg5, true, pct],
+    ["bo", "Plan buildout", n => n.buildout, true, v => d3.format(".0f")(v) + "%"],
+  ];
+  let sortK = "u5", sortDir = -1;
+  function renderTable() {
+    const q = document.getElementById("tfind").value.toLowerCase(), c = document.getElementById("tcls").value;
+    const col = COLS.find(x => x[0] === sortK);
+    const rows = nbs.filter(n => (c === "all" || n.cls === c) && (!q || (n.name + " " + n.ward + " " + n.district).toLowerCase().includes(q)))
+      .sort((a, b) => { const va = col[2](a), vb = col[2](b); if (va == null) return 1; if (vb == null) return -1; return sortDir * (col[3] ? va - vb : String(va).localeCompare(String(vb))); });
+    document.getElementById("nbtable").innerHTML = `<thead><tr>${COLS.map(x => `<th class="${x[3] ? "n" : ""}" data-k="${x[0]}" ${x[0] === sortK ? `aria-sort="${sortDir > 0 ? "ascending" : "descending"}"` : ""}>${x[1]}</th>`).join("")}</tr></thead><tbody>` +
+      rows.map(n => `<tr data-id="${n.id}">${COLS.map(x => { const v = x[2](n); return `<td class="${x[3] ? "n" : ""}">${v == null || (typeof v === "number" && !isFinite(v)) ? "–" : x[4] ? x[4](v) : x[3] ? fmt(v) : v}</td>`; }).join("")}</tr>`).join("") + "</tbody>";
+    document.querySelectorAll("#nbtable th").forEach(th => th.addEventListener("click", () => { if (sortK === th.dataset.k) sortDir *= -1; else { sortK = th.dataset.k; sortDir = COLS.find(x => x[0] === sortK)[3] ? -1 : 1; } renderTable(); }));
+    document.querySelectorAll("#nbtable tbody tr").forEach(tr => tr.addEventListener("click", () => { setTab("map"); select(tr.dataset.id); }));
+  }
+  document.getElementById("tfind").addEventListener("input", renderTable);
+  document.getElementById("tcls").addEventListener("change", renderTable);
+  renderTable();
+
+  // ---------- method
+  const S = D.sources;
+  document.getElementById("method").innerHTML = [
+    `<b>Building permits</b> (<a href="${S.building_permits}" target="_blank" rel="noopener">General Building Permits</a>, 2009 onward): every permit that adds or removes dwelling units, placed in neighbourhoods and plan areas by its coordinates. "Net units" subtracts units removed by demolitions. Permits are issued approvals, not completions, and large apartment projects can appear in the year the permit was issued.`,
+    `<b>Dwellings today</b> = occupied private dwellings in the 2021 federal census plus net units permitted since the census (about 60% of 2021 permits, then all later years). It slightly overstates dwellings because recent permits may not be finished yet.`,
+    `<b>Census</b>: 2016 and 2021 federal census and the 2019 municipal census, by neighbourhood. Where a neighbourhood was renamed or split after the census (for example Oliver to Wîhkwêntôwin, or Chappelle Area), figures are re-allocated using census-day boundaries and the housing stock that existed at the time.`,
+    `<b>Assessment</b>: Property Assessment Data (historical 2012–${CY - 1} plus the current ${CY} roll). The average is total residential and other-residential value divided by accounts, so a neighbourhood whose new supply is mostly condos will show a lower average than its house prices suggest.`,
+    `<b>Statutory plans</b>: boundaries from <a href="${S.plans_in_effect}" target="_blank" rel="noopener">Plans in Effect</a>. Planned units, population, density and low-density share were transcribed from the Land Use &amp; Population Statistics table in each plan's office consolidation PDF (${tracked.length} NSPs and NASPs). Buildout compares estimated dwellings within the plan boundary to the plan's total units, so plans that include existing country residential lots can start above zero and older plans can exceed 100%.`,
+    `<b>Redevelopment plans</b> state targets in different ways, so each is measured on its own terms. "New units" targets count net units permitted inside the plan boundary since the plan's adoption. Population targets use the 2021 census; where a plan covers only part of a neighbourhood (The Quarters is about half of Boyle Street), residents are estimated by area share. The City Centre ARP target (Blatchford) is derived from its district density objectives, since it has no statistics table.`,
+    `<b>Mix vs plan</b> compares the plan's low-density (single/semi-detached) share of units with the share of units actually permitted in the plan area since 2015. More than 10 points below plan is flagged "denser than plan"; more than 10 points above, "less dense than plan".`,
+    `<b>Classification</b> (Developing / Redeveloping / Industrial) comes from the City's neighbourhood classification on development permits. Redeveloping covers mature and established neighbourhoods.`,
+  ].map(t => `<li>${t}</li>`).join("");
+
+  // ---------- initial state
+  let m0 = 0, nb0 = null, t0 = "map";
+  try { m0 = +(localStorage.getItem("egm-metric") || 0); nb0 = localStorage.getItem("egm-nb"); t0 = localStorage.getItem("egm-tab") || "map"; } catch (e) {}
+  const h = location.hash.slice(1); if (["map", "plans", "compare", "table"].includes(h)) t0 = h;
+  msel.value = String(m0 < METRICS.length ? m0 : 0);
+  paint();
+  select(nb0 && byId.has(nb0) ? nb0 : nameToId.get("the orchards at ellerslie") || nbs[0].id);
+  setTab(t0);
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { paint(); select(selected); stackedBars(document.getElementById("citychart"), cityRows, { w: 1200, h: 260 }); });
+})();
+</script>
