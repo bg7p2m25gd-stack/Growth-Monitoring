@@ -4,27 +4,34 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <style>
-/* Layout: a planning-office console. Header with city totals, three working tabs
-   (map + neighbourhood file, plan buildout ledger, side-by-side compare). Slate neutrals
-   biased toward the map blue; ochre accent borrowed from the low-density yellow on plan maps. */
+/* Layout: a planning-office console. Header band with city totals, working tabs below.
+   Brand palette: Aquamarine #85ffc7, Vibrant Coral #f87060, Dusty Olive #82846d, Dim Grey #646165,
+   Midnight Violet #210124. Coral is the accent; violet anchors the header and ink; aquamarine highlights.
+   Chart series and ramps are derived from the brand hues and validated for colour-blind separation. */
 :root {
-  --bg: #f5f6f7;
+  --bg: #f6f4f7;
   --panel: #ffffff;
-  --ink: #15191e;
-  --ink-2: #4a525c;
-  --ink-3: #737b86;
-  --rule: #dde1e6;
-  --rule-2: #eceff2;
-  --accent: #9a6a00;
-  --accent-soft: #f6ead0;
-  --nodata: #e6e8eb;
+  --ink: #210124;            /* Midnight Violet */
+  --ink-2: #646165;          /* Dim Grey */
+  --ink-3: #6b6d57;          /* Dusty Olive, darkened for readable small text */
+  --rule: #e3dee4;
+  --rule-2: #f0edf1;
+  --accent: #f87060;         /* Vibrant Coral: marks, selection, highlights */
+  --link: #c8432f;           /* coral darkened for text on light surfaces */
+  --accent-soft: #85ffc7;    /* Aquamarine */
+  --on-aqua: #210124;
+  --band: #210124;           /* header band */
+  --band-ink: #ffffff;
+  --band-ink-2: #c9c1cc;
+  --band-accent: #85ffc7;
+  --nodata: #e8e4e9;
   --map-line: #ffffff;
 
-  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s-other: #a3a9b1;
-  --seq-1: #cde2fb; --seq-2: #9ec5f4; --seq-3: #6da7ec; --seq-4: #3987e5; --seq-5: #256abf; --seq-6: #184f95; --seq-7: #0d366b;
-  --div-neg: #d03b3b; --div-mid: #f0efec;
-  --good: #0ca30c; --warn: #fab219; --bad: #d03b3b;
-  --good-ink: #0b6e0b; --bad-ink: #a52b2b;
+  --s1: #8a4fb0; --s2: #13a374; --s3: #f2604f; --s4: #3a78d0; --s5: #d6961a; --s-other: #82846d;
+  --seq-1: #efe6f2; --seq-2: #d9c3e1; --seq-3: #bb98cb; --seq-4: #9568ae; --seq-5: #6b3d88; --seq-6: #45205c; --seq-7: #210124;
+  --div-neg: #f2604f; --div-mid: #ece8ec;
+  --good: #13a374; --warn: #d6961a; --bad: #f2604f;
+  --good-ink: #0b6e4a; --bad-ink: #b93a28;
 
   --f-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
   --f-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
@@ -32,20 +39,26 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #121519; --panel: #1a1e23; --ink: #eef1f4; --ink-2: #b4bcc6; --ink-3: #8a929c;
-    --rule: #2c3239; --rule-2: #22272d; --accent: #e0aa3e; --accent-soft: #3a2f17; --nodata: #2a3037; --map-line: #121519;
-    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s-other: #6b727b;
-    --seq-1: #104281; --seq-2: #184f95; --seq-3: #1c5cab; --seq-4: #2a78d6; --seq-5: #5598e7; --seq-6: #86b6ef; --seq-7: #cde2fb;
-    --div-mid: #383835; --good-ink: #5fd35f; --bad-ink: #f08080;
+    --bg: #210124; --panel: #2b0d30; --ink: #f4eff5; --ink-2: #c9c1cc; --ink-3: #ada4b0;
+    --rule: #48294d; --rule-2: #371a3c; --accent: #f87060; --link: #f87060; --accent-soft: #85ffc7; --on-aqua: #210124;
+    --band: #2b0d30; --band-ink: #ffffff; --band-ink-2: #c9c1cc; --band-accent: #85ffc7;
+    --nodata: #3b2440; --map-line: #210124;
+    --s1: #9a66c4; --s2: #1c9a6d; --s3: #e05a4a; --s4: #4580d4; --s5: #bd8719; --s-other: #82846d;
+    --seq-1: #1d3f3a; --seq-2: #1f5c4e; --seq-3: #237a63; --seq-4: #2c9a7a; --seq-5: #41ba92; --seq-6: #62dbab; --seq-7: #85ffc7;
+    --div-neg: #e05a4a; --div-mid: #45304a;
+    --good: #85ffc7; --warn: #bd8719; --bad: #f87060; --good-ink: #85ffc7; --bad-ink: #f87060;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #121519; --panel: #1a1e23; --ink: #eef1f4; --ink-2: #b4bcc6; --ink-3: #8a929c;
-  --rule: #2c3239; --rule-2: #22272d; --accent: #e0aa3e; --accent-soft: #3a2f17; --nodata: #2a3037; --map-line: #121519;
-  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s-other: #6b727b;
-  --seq-1: #104281; --seq-2: #184f95; --seq-3: #1c5cab; --seq-4: #2a78d6; --seq-5: #5598e7; --seq-6: #86b6ef; --seq-7: #cde2fb;
-  --div-mid: #383835; --good-ink: #5fd35f; --bad-ink: #f08080;
+  --bg: #210124; --panel: #2b0d30; --ink: #f4eff5; --ink-2: #c9c1cc; --ink-3: #ada4b0;
+  --rule: #48294d; --rule-2: #371a3c; --accent: #f87060; --link: #f87060; --accent-soft: #85ffc7; --on-aqua: #210124;
+  --band: #2b0d30; --band-ink: #ffffff; --band-ink-2: #c9c1cc; --band-accent: #85ffc7;
+  --nodata: #3b2440; --map-line: #210124;
+  --s1: #9a66c4; --s2: #1c9a6d; --s3: #e05a4a; --s4: #4580d4; --s5: #bd8719; --s-other: #82846d;
+  --seq-1: #1d3f3a; --seq-2: #1f5c4e; --seq-3: #237a63; --seq-4: #2c9a7a; --seq-5: #41ba92; --seq-6: #62dbab; --seq-7: #85ffc7;
+  --div-neg: #e05a4a; --div-mid: #45304a;
+  --good: #85ffc7; --warn: #bd8719; --bad: #f87060; --good-ink: #85ffc7; --bad-ink: #f87060;
   color-scheme: dark;
 }
 
@@ -55,15 +68,16 @@ body { background: var(--bg); color: var(--ink); font: 15px/1.45 var(--f-body); 
 h1, h2, h3 { font-family: var(--f-display); font-weight: 600; letter-spacing: 0.01em; text-wrap: balance; margin: 0; }
 .num, td.n, .kpi b, .mono { font-family: var(--f-data); font-variant-numeric: tabular-nums; }
 .eyebrow { font: 600 11px/1.2 var(--f-body); letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); }
-a { color: var(--accent); }
+a { color: var(--link); }
 button, select, input { font: inherit; color: inherit; }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 
 /* header */
-.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 32px; padding-bottom: 14px; border-bottom: 1px solid var(--rule); }
-.top h1 { font-size: 34px; line-height: 1; }
-.top h1 span { color: var(--accent); }
-.top .asof { color: var(--ink-3); font-size: 13px; }
+.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 32px; padding: 18px 22px 16px; background: var(--band); color: var(--band-ink); border-radius: 6px; border-bottom: 4px solid var(--accent); }
+.top h1 { font-size: 34px; line-height: 1; color: var(--band-ink); }
+.top h1 span { color: var(--band-accent); }
+.top .eyebrow { color: var(--band-ink-2); }
+.top .asof { color: var(--band-ink-2); font-size: 13px; }
 .kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); margin-block: 16px; }
 .kpi { background: var(--panel); padding: 12px 14px; min-width: 0; }
 .kpi b { display: block; font-size: 22px; font-weight: 500; margin-top: 4px; }
@@ -102,7 +116,7 @@ select, input[type="search"] { background: var(--panel); border: 1px solid var(-
 .file h2 { font-size: 28px; line-height: 1.05; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--rule); color: var(--ink-2); white-space: nowrap; }
-.chip.dev { background: var(--accent-soft); border-color: transparent; color: var(--ink); }
+.chip.dev { background: var(--accent-soft); border-color: transparent; color: var(--on-aqua); }
 .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 16px; }
 .facts div { min-width: 0; }
 .facts b { display: block; font: 500 18px var(--f-data); font-variant-numeric: tabular-nums; }
@@ -122,7 +136,7 @@ select, input[type="search"] { background: var(--panel); border: 1px solid var(-
 .planrow .meta { font-size: 12.5px; color: var(--ink-3); }
 .bar { position: relative; height: 10px; background: var(--rule-2); border-radius: 2px; grid-column: 1 / -1; overflow: hidden; }
 .bar i { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 2px; }
-.bar.over i { background: var(--s3); }
+.bar.over i { background: var(--s2); }
 .mix { display: flex; height: 16px; gap: 2px; margin-top: 4px; }
 .mix i { display: block; height: 100%; min-width: 0; }
 .mix i:first-child { border-radius: 3px 0 0 3px; } .mix i:last-child { border-radius: 0 3px 3px 0; }
@@ -661,7 +675,7 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
     }
     return out;
   }
-  const TYPECOL = { ARP: ["--s2", "Redevelopment plan (ARP)"], ASP: ["--s1", "Area structure plan (several neighbourhoods)"], NASP: ["--s3", "Neighbourhood area structure plan"] };
+  const TYPECOL = { ARP: ["--s3", "Redevelopment plan (ARP)"], ASP: ["--s1", "Area structure plan (several neighbourhoods)"], NASP: ["--s2", "Neighbourhood area structure plan"] };
   function renderLag() {
     const rows = plans.filter(p => p.lag_years != null && ["ASP", "NASP", "ARP"].includes(p.type)).sort((a, b) => b.lag_years - a.lag_years);
     const W = 1200, rowH = 26, m = { t: 8, r: 70, b: 26, l: 250 }, H = m.t + m.b + rows.length * rowH;
