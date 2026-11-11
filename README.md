@@ -9,6 +9,10 @@ buildout targets in approved statutory plans (NSPs / NASPs).
 - `pipeline/plan_targets.json` — planned units, population, density (du/nrha) and low-density share,
   transcribed by hand from each plan's Land Use & Population Statistics table. **Update this when a
   plan amendment changes its statistics** (the bylaw number is recorded for each plan).
+- `pipeline/plan_dates.json` — each plan's adopting bylaw and approval date, read from the bylaw history
+  in its consolidation by `pipeline/extract_plan_dates.py`. Entries marked `verified` were checked by hand.
+- `pipeline/first_permit_overrides.json` — hand-checked first-permit dates where the automatic rule is
+  fooled by houses on old acreages (currently Horse Hill ASP and Marquis NSP).
 - `pipeline/extract_plan_text.py`, `pipeline/render_pages.py` — helpers for reading plan PDFs.
 - `refresh.sh` — re-pulls all data.
 

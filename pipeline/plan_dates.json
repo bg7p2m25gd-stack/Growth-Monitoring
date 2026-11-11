@@ -1,0 +1,573 @@
+{
+ "Albany NSP": {
+  "bylaw": "15291",
+  "adopted": "2009-10-28",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Alces NSP": {
+  "bylaw": "18540",
+  "adopted": "2018-09-17",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Ambleside NSP": {
+  "bylaw": "14057",
+  "adopted": "2005-07-28",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Aster NSP": {
+  "bylaw": "17366",
+  "adopted": "2016-01-26",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Aurum Industrial Business Park ASP": {
+  "bylaw": "9809",
+  "adopted": "1991-10-08",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Big Lake ASP": {
+  "bylaw": "9878",
+  "adopted": "1991-08",
+  "precision": "month",
+  "source": "plan consolidation bylaw history"
+ },
+ "Canossa NSP": {
+  "bylaw": null,
+  "adopted": null,
+  "precision": null,
+  "source": "plan consolidation bylaw history"
+ },
+ "Capital City Downtown Plan": {
+  "bylaw": "15200",
+  "adopted": "2010-04",
+  "precision": "month",
+  "source": "plan consolidation bylaw history"
+ },
+ "Carlton NSP": {
+  "bylaw": "12001",
+  "adopted": "1999-04-26",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Castle Downs Extension ASP": {
+  "bylaw": "7361",
+  "adopted": "1983-11-15",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Cavanagh": {
+  "bylaw": "16497",
+  "adopted": "2013-07-15",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Chappelle NASP": {
+  "bylaw": "14779",
+  "adopted": "2008-02-20",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Charlesworth NSP": {
+  "bylaw": "14010",
+  "adopted": "2005-06-30",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "City Centre ARP": {
+  "bylaw": "16033",
+  "adopted": "2012-05-16",
+  "precision": "day",
+  "source": "plan consolidation bylaw history",
+  "alt_start": {
+   "label": "Airport closure (City takes control of the land)",
+   "date": "2013-11-30"
+  },
+  "verified": true
+ },
+ "Crossroads ASP": {
+  "bylaw": null,
+  "adopted": null,
+  "precision": null,
+  "source": "plan consolidation bylaw history"
+ },
+ "Crystallina Nera East NSP": {
+  "bylaw": "15801",
+  "adopted": "2011-09-02",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Crystallina Nera West NSP": {
+  "bylaw": "14599",
+  "adopted": "2007-07-09",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Cy Becker NSP": {
+  "bylaw": "15747",
+  "adopted": "2012-07-04",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Decoteau ASP": {
+  "bylaw": "17011",
+  "adopted": "2015-07-07",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Desrochers NASP": {
+  "bylaw": "15552",
+  "adopted": "2010-11-08",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Eaux Claires NSP": {
+  "bylaw": "7312",
+  "adopted": "1983-12",
+  "precision": "month",
+  "source": "plan consolidation bylaw history"
+ },
+ "Edgemont NASP": {
+  "bylaw": "15717",
+  "adopted": "2011-06-22",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Edmonton Energy and Technology Park ASP": {
+  "bylaw": "15093",
+  "adopted": "2010-06-09",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Edmonton North ASP": {
+  "bylaw": "5739",
+  "adopted": "1979-08",
+  "precision": "month",
+  "source": "plan consolidation bylaw history"
+ },
+ "Ellerslie ASP": {
+  "bylaw": "11870",
+  "adopted": "1999-01",
+  "precision": "month",
+  "source": "plan consolidation bylaw history"
+ },
+ "Ellerslie NSP": {
+  "bylaw": "12581",
+  "adopted": "2001-05-01",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Exhibition Lands Planning Framework": {
+  "bylaw": "19267",
+  "adopted": "2021-03-15",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "GORMAN NSP": {
+  "bylaw": "19338",
+  "adopted": "2020-11-16",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Glenridding Heights NSP": {
+  "bylaw": "15803",
+  "adopted": "2011-07-04",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Glenridding Ravine NSP": {
+  "bylaw": "17798",
+  "adopted": "2016-12-13",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Goodridge Corners NASP": {
+  "bylaw": "16714",
+  "adopted": "2014-02-24",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Granville NSP": {
+  "bylaw": "14699",
+  "adopted": "2007-08-21",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Griesbach NASP": {
+  "bylaw": "12936",
+  "adopted": "2002-03-18",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Hawks Ridge NSP": {
+  "bylaw": "15547",
+  "adopted": "2010-09-13",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Hays Ridge NASP": {
+  "bylaw": "15902",
+  "adopted": "2012-04-16",
+  "precision": "day",
+  "source": "Day from City records (Josh, 3 Nov 2026); consolidation gives April 2012",
+  "verified": true
+ },
+ "Heritage Valley NBHD 14 NASP": {
+  "bylaw": "19279",
+  "adopted": "2020-08-17",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Heritage Valley Town Centre NASP": {
+  "bylaw": "15296",
+  "adopted": "2009-12-16",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Hermitage General OP": {
+  "bylaw": null,
+  "adopted": null,
+  "precision": null,
+  "source": "plan consolidation bylaw history"
+ },
+ "Horse Hill ASP": {
+  "bylaw": "16353",
+  "adopted": "2013-05-22",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Hudson NSP": {
+  "bylaw": "11537",
+  "adopted": "1997-07-07",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Kendal NSP": {
+  "bylaw": "21113",
+  "adopted": "2025-04-28",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Keswick NSP": {
+  "bylaw": "15514",
+  "adopted": "2010-07-19",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Kinglet Gardens": {
+  "bylaw": "17752",
+  "adopted": "2016-12-13",
+  "precision": "day",
+  "source": "Bylaw history: Bylaw 17752 December 13, 2016, to adopt",
+  "verified": true
+ },
+ "Klarvatten NSP": {
+  "bylaw": "6368",
+  "adopted": "1982-02-23",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Laurel NSP": {
+  "bylaw": "14622",
+  "adopted": "2007-07",
+  "precision": "month",
+  "source": "plan consolidation bylaw history"
+ },
+ "Lewis Farms ASP": {
+  "bylaw": "8733",
+  "adopted": "1988-06-14",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Lewis Farms Business Employment NSP": {
+  "bylaw": "19040",
+  "adopted": "2020-08-18",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Maple NSP": {
+  "bylaw": "15396",
+  "adopted": "2010-04-12",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Maple Ridge Industrial  ASP": {
+  "bylaw": "15357",
+  "adopted": "2010-03-08",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Marquis NSP": {
+  "bylaw": "17022",
+  "adopted": "2015-04-28",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Mattson NSP": {
+  "bylaw": "19043",
+  "adopted": "2019-10-21",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "McConachie NSP": {
+  "bylaw": "14173",
+  "adopted": "2006-01-24",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Meltwater NSP": {
+  "bylaw": "20556",
+  "adopted": "2021-02-23",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Mill Woods Station ARP": {
+  "bylaw": "16537",
+  "adopted": "2013-09-16",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "North Edge ARP": {
+  "bylaw": "11648",
+  "adopted": "1998-03",
+  "precision": "month",
+  "source": "plan consolidation bylaw history"
+ },
+ "North Saskatchewan River Valley ARP": {
+  "bylaw": null,
+  "adopted": null,
+  "precision": null,
+  "source": "plan consolidation bylaw history"
+ },
+ "Paisley NASP": {
+  "bylaw": "15845",
+  "adopted": "2011-08-29",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Palisades ASP": {
+  "bylaw": "7464",
+  "adopted": "1984-04-24",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Pilot Sound ASP": {
+  "bylaw": "6288",
+  "adopted": "1981-06-24",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Pintail Landing NSP": {
+  "bylaw": "18905",
+  "adopted": "2019-10-08",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Place LaRue West NASP": {
+  "bylaw": "13377",
+  "adopted": "2004-06-30",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Potter Greens NSP": {
+  "bylaw": "9390",
+  "adopted": "1990-03-14",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Pylypow Industrial ASP": {
+  "bylaw": "14135",
+  "adopted": "2006-01-11",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Quarry Ridge NSP": {
+  "bylaw": "19774",
+  "adopted": "2021-08-17",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Rampart Industrial ASP": {
+  "bylaw": "7465",
+  "adopted": "1984-04-24",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Rapperswill NSP": {
+  "bylaw": "15289",
+  "adopted": "2010-01-20",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Richford NASP": {
+  "bylaw": "12118",
+  "adopted": "1999-09-24",
+  "precision": "day",
+  "source": "Bylaw history: Bylaw 12118 Approved September 24, 1999",
+  "verified": true
+ },
+ "River's Edge NSP": {
+  "bylaw": "17270",
+  "adopted": "2015-09-22",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Riverview ASP": {
+  "bylaw": "16407",
+  "adopted": "2013-07-03",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Rosenthal NSP": {
+  "bylaw": "15096",
+  "adopted": "2009-03-11",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Rossdale ARP": {
+  "bylaw": "8139",
+  "adopted": "1986-06-10",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Schonsee NSP": {
+  "bylaw": "12951",
+  "adopted": "2002-03-15",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Secord NSP": {
+  "bylaw": "14677",
+  "adopted": "2007-09-10",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Southeast ASP": {
+  "bylaw": "14010",
+  "adopted": "2005-06-30",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Stadium Station ARP": {
+  "bylaw": "18145",
+  "adopted": "2018-02-26",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Starling NSP": {
+  "bylaw": "15461",
+  "adopted": "2010-08-23",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Stewart Greens NSP": {
+  "bylaw": "14674",
+  "adopted": "2007-08-21",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Stillwater NSP": {
+  "bylaw": "17736",
+  "adopted": "2016-11-29",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Tamarack NSP": {
+  "bylaw": "14112",
+  "adopted": "2006-02-22",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "The Grange ASP": {
+  "bylaw": "11749",
+  "adopted": "1998-05-25",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "The Meadows ASP": {
+  "bylaw": "13531",
+  "adopted": "2004-01-21",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "The Orchards at Ellerslie NSP": {
+  "bylaw": "14724",
+  "adopted": "2007-11-15",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "The Quarters Downtown ARP": {
+  "bylaw": "15037",
+  "adopted": "2009-04-15",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "The Uplands NSP": {
+  "bylaw": "17269",
+  "adopted": "2015-09-22",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Trumpeter NSP": {
+  "bylaw": "14803",
+  "adopted": "2008-01-14",
+  "precision": "day",
+  "source": "Bylaw history: Bylaw 14803 Approved January 14, 2008, to adopt",
+  "verified": true
+ },
+ "Walker NSP": {
+  "bylaw": "14543",
+  "adopted": "2007-04-02",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Webber Greens NSP": {
+  "bylaw": "12360",
+  "adopted": "2000-07-18",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Windermere ASP": {
+  "bylaw": "13717",
+  "adopted": "2004-05-25",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Windermere NSP": {
+  "bylaw": "14372",
+  "adopted": "2006-09-13",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "Winterburn Industrial ASP": {
+  "bylaw": "15356",
+  "adopted": "2010-02-16",
+  "precision": "day",
+  "source": "plan consolidation bylaw history"
+ },
+ "_about": "Adopting bylaw and council approval date of each statutory plan, read from the bylaw history at the front of its office consolidation. Entries with verified=true were checked by hand and are never overwritten by extract_plan_dates.py. precision = day or month.",
+ "Allard NASP": {
+  "bylaw": "14510",
+  "adopted": "2007-05-23",
+  "precision": "day",
+  "source": "Allard NASP consolidation (plan not in the Plans in Effect dataset)",
+  "verified": true
+ },
+ "Graydon Hill NASP": {
+  "bylaw": "16323",
+  "adopted": "2013-01-21",
+  "precision": "day",
+  "source": "Graydon Hill NASP consolidation (plan not in the Plans in Effect dataset)",
+  "verified": true
+ },
+ "Cashman NASP": {
+  "bylaw": "13760",
+  "adopted": "2005-01-24",
+  "precision": "day",
+  "source": "City records (Josh, 3 Nov 2026) (plan not in the Plans in Effect dataset)",
+  "verified": true
+ }
+}

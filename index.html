@@ -149,6 +149,13 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
 /* compare */
 .cmpgrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
 @media (max-width: 1000px) { .cmpgrid { grid-template-columns: minmax(0, 1fr); } }
+.pacegrid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 1000px) { .pacegrid { grid-template-columns: minmax(0, 1fr); } }
+.callout { font-size: 15px; color: var(--ink-2); max-width: 80ch; margin: 4px 0 12px; }
+.callout b { color: var(--ink); font-family: var(--f-data); font-weight: 500; }
+.catch td, .catch th { padding: 6px 8px; }
+.catch tbody tr { cursor: default; }
+.facts.tight { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .card { background: var(--panel); border: 1px solid var(--rule); padding: 14px 16px; min-width: 0; }
 .picks { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .pick { display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 10px; border: 1px solid var(--rule); border-radius: 999px; font-size: 13px; background: var(--panel); }
@@ -178,6 +185,7 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" id="tab-map" aria-selected="true" data-tab="map">Neighbourhood map</button>
     <button class="tab" role="tab" id="tab-plans" aria-selected="false" data-tab="plans">Plan buildout</button>
+    <button class="tab" role="tab" id="tab-pace" aria-selected="false" data-tab="pace">Build-out pace</button>
     <button class="tab" role="tab" id="tab-compare" aria-selected="false" data-tab="compare">Compare</button>
     <button class="tab" role="tab" id="tab-table" aria-selected="false" data-tab="table">All neighbourhoods</button>
   </div>
@@ -235,6 +243,40 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
     <div class="tablewrap"><table id="arptable"></table></div>
     <div class="tablehead"><div><h2>Plans without buildout figures here</h2><div class="note">Area structure plans that roll up several NSPs, and industrial plans. Their boundaries still appear on the map.</div></div></div>
     <div class="tablewrap"><table id="otherplans"></table></div>
+  </section>
+
+  <section id="panel-pace" hidden>
+    <p class="lede">How long each statutory plan took to see its first home permit, and how quickly its planned units have been permitted since. Every greenfield plan whose whole build-out falls inside the permit data (2009 onward) is a benchmark.</p>
+    <div class="tablehead" style="margin-top:4px"><div><h2>Plan approval to first home permit</h2><div class="note">Statutory plans only: area structure plans (ASP), neighbourhood area structure plans (NASP) and the City Centre ARP. Neighbourhood structure plans sit under an ASP and are listed in the table below.</div></div><div class="serieskey" id="lagkey"></div></div>
+    <div class="callout" id="lagcallout"></div>
+    <div class="card chart" id="lagchart"></div>
+
+    <div class="tablehead"><div><h2>Build-out since first permit</h2><div class="note">Cumulative units permitted as a share of the plan's planned units. Year 1 is the calendar year of the first home permit. The shaded band is the middle half of the comparison plans (25th to 75th percentile), shown only for years at least 5 of them have reached.</div></div></div>
+    <div class="controls">
+      <label for="paceplan">Plan
+        <select id="paceplan"></select>
+      </label>
+      <label for="pacepeers">Compare against
+        <select id="pacepeers">
+          <option value="all">All greenfield plans</option>
+          <option value="curated">Workbook peers (10)</option>
+        </select>
+      </label>
+      <label for="pacemeasure">Show
+        <select id="pacemeasure">
+          <option value="pct">% of planned units</option>
+          <option value="units">Units permitted</option>
+        </select>
+      </label>
+    </div>
+    <div class="pacegrid">
+      <div class="card chart"><div class="serieskey" id="pacekey"></div><div id="pacechart"></div></div>
+      <div class="card" id="catchup"></div>
+    </div>
+
+    <div class="tablehead"><div><h2>Pace by plan</h2><div class="note">Click a row to chart that plan. Units are gross units permitted (demolitions not subtracted). The current year is year to date.</div></div></div>
+    <div class="tablewrap"><table id="pacetable"></table></div>
+    <div class="note" id="paceexcluded" style="margin-top:10px;max-width:100ch"></div>
   </section>
 
   <section id="panel-compare" hidden>
@@ -346,9 +388,10 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
   const tabs = [...document.querySelectorAll(".tab")];
   function setTab(t) {
     tabs.forEach(b => b.setAttribute("aria-selected", b.dataset.tab === t));
-    ["map", "plans", "compare", "table"].forEach(k => document.getElementById("panel-" + k).hidden = k !== t);
+    ["map", "plans", "pace", "compare", "table"].forEach(k => document.getElementById("panel-" + k).hidden = k !== t);
     try { localStorage.setItem("egm-tab", t); } catch (e) {}
     if (t === "compare") renderCompare();
+    if (t === "pace") renderPace();
   }
   tabs.forEach(b => b.addEventListener("click", () => setTab(b.dataset.tab)));
 
@@ -536,6 +579,7 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
         ${t.note ? `<div class="meta" style="grid-column:1/-1">${t.note}</div>` : ""}
         <div class="meta" style="grid-column:1/-1">Est. ${fmt(p.dwell_est_now)} dwellings today · ${fmt(p.remaining_units)} units to go${p.recent_ldr_pct != null ? ` · units permitted since 2015 were ${d3.format(".0f")(p.recent_ldr_pct)}% single/semi` : ""}</div>`;
     }
+    if (p.adopted || p.first_permit) body += `<div class="meta" style="grid-column:1/-1">${p.adopted ? `Approved ${fmtDate(p.adopted)}${p.adopt_bylaw ? " (Bylaw " + p.adopt_bylaw + ")" : ""}` : ""}${p.first_permit ? `${p.adopted ? " · " : ""}first home permit ${fmtDate(p.first_permit.date)}${p.lag_years != null ? `, ${fmt1(p.lag_years)} years later` : ""}` : ""}</div>`;
     return `<div class="planrow">${body}</div>`;
   }
 
@@ -575,6 +619,164 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
   const others = plans.filter(p => !(p.target && p.target.units) && !p.arp).sort((a, b) => d3.ascending(a.type + a.name, b.type + b.name));
   document.getElementById("otherplans").innerHTML = `<thead><tr><th>Plan</th><th>Type</th><th class="n">Area (ha)</th><th class="n">Est. dwellings today</th><th class="n">Units ${W0}–${LY}</th><th></th></tr></thead><tbody>` +
     others.map(p => `<tr><td><b>${p.name}</b></td><td>${p.type_descr}</td><td class="n">${fmt(p.area_ha)}</td><td class="n">${fmt(p.dwell_est_now)}</td><td class="n">${fmt(p.recent)}</td><td>${p.pdf ? `<a href="${encodeURI(p.pdf)}" target="_blank" rel="noopener">PDF</a>` : ""}</td></tr>`).join("") + "</tbody>";
+
+  // ---------- build-out pace
+  function fmtDate(s) {
+    if (!s) return "–";
+    const [y, m, d] = s.split("-").map(Number);
+    const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m - 1];
+    return d ? `${d} ${mon} ${y}` : `${mon} ${y}`;
+  }
+  const CURATED = ["Keswick NSP", "The Uplands NSP", "Allard NASP", "Desrochers NASP", "Cy Becker NSP", "Rosenthal NSP", "Alces NSP", "Paisley NASP", "Hays Ridge NASP", "Cavanagh"];
+  const SUBJECT = "City Centre ARP";
+  const planUnits = p => p.target && p.target.units ? p.target.units : null;
+  const firstYear = p => p.first_permit ? +p.first_permit.date.slice(0, 4) : null;
+  const paceable = plans.filter(p => p.pace_status === "measurable" && planUnits(p));
+  const greenfield = paceable.filter(p => p.type !== "ARP" && planUnits(p) >= 1000);
+  const label = p => p.name === SUBJECT ? "City Centre ARP (Blatchford)" : p.name;
+  // cumulative gross units permitted through each permitting year (year 1 = first-permit year)
+  function series(p) {
+    const fy = firstYear(p), out = [];
+    let cum = 0;
+    for (const [y, v] of Object.entries(p.permits)) if (+y < fy) cum += v.units;
+    for (let y = fy; y <= CY; y++) { cum += p.permits[y] ? p.permits[y].units : 0; out.push({ k: y - fy + 1, y, cum, pct: cum / planUnits(p) }); }
+    return out;
+  }
+  for (const p of paceable) {
+    p.pace = series(p);
+    const yrs5 = p.pace.slice(0, 5);
+    p.first5 = yrs5.length === 5 ? yrs5[4].cum : null;
+    p.toDate = p.pace.length ? p.pace[p.pace.length - 1].cum : 0;
+    const tot = d3.sum(Object.values(p.permits), v => v.units) || 1;
+    p.multiShare = d3.sum(Object.values(p.permits), v => v.row + v.apartment) / tot;
+    p.suiteShare = d3.sum(Object.values(p.permits), v => v.suite + v.backyard) / tot;
+    for (const q of [0.25, 0.5]) { const hit = p.pace.find(s => s.pct >= q); p["reach" + q * 100] = hit ? hit.k : null; }
+  }
+  function peerStats(peers, key) {
+    const maxK = d3.max(peers, p => p.pace.length) || 0, out = [];
+    for (let k = 1; k <= maxK; k++) {
+      const vals = peers.map(p => p.pace[k - 1]).filter(Boolean).map(s => s[key]).sort(d3.ascending);
+      if (vals.length < 5) break;
+      out.push({ k, n: vals.length, p25: d3.quantile(vals, 0.25), med: d3.quantile(vals, 0.5), p75: d3.quantile(vals, 0.75) });
+    }
+    return out;
+  }
+  const TYPECOL = { ARP: ["--s2", "Redevelopment plan (ARP)"], ASP: ["--s1", "Area structure plan (several neighbourhoods)"], NASP: ["--s3", "Neighbourhood area structure plan"] };
+  function renderLag() {
+    const rows = plans.filter(p => p.lag_years != null && ["ASP", "NASP", "ARP"].includes(p.type)).sort((a, b) => b.lag_years - a.lag_years);
+    const W = 1200, rowH = 26, m = { t: 8, r: 70, b: 26, l: 250 }, H = m.t + m.b + rows.length * rowH;
+    const x = d3.scaleLinear().domain([0, d3.max(rows, r => r.lag_years) * 1.02]).nice().range([m.l, W - m.r]);
+    const s = d3.select("#lagchart").html("").append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("role", "img").attr("aria-label", "Years from plan approval to first home permit");
+    s.append("g").attr("class", "grid").selectAll("line").data(x.ticks(8)).join("line").attr("x1", d => x(d)).attr("x2", d => x(d)).attr("y1", m.t).attr("y2", H - m.b);
+    s.append("g").selectAll("text").data(x.ticks(8)).join("text").attr("x", d => x(d)).attr("y", H - 8).attr("text-anchor", "middle").text(d => d + (d === 0 ? "" : " yr"));
+    rows.forEach((p, i) => {
+      const y = m.t + i * rowH, c = css(TYPECOL[p.type][0]), bh = rowH - 8;
+      s.append("text").attr("x", m.l - 8).attr("y", y + bh / 2 + 4).attr("text-anchor", "end").attr("style", `fill:var(${p.name === SUBJECT ? "--ink" : "--ink-2"});font:${p.name === SUBJECT ? 600 : 400} 12px var(--f-body)`).text(label(p) + (p.repealed ? " †" : ""));
+      const w = Math.max(2, x(p.lag_years) - m.l);
+      s.append("path").attr("fill", c).attr("d", `M${m.l},${y}h${w - 3}q3,0 3,3v${bh - 6}q0,3 -3,3h${-(w - 3)}Z`);
+      s.append("text").attr("x", m.l + w + 6).attr("y", y + bh / 2 + 4).text(fmt1(p.lag_years));
+      if (p.lag_years_alt != null) s.append("circle").attr("cx", x(p.lag_years_alt)).attr("cy", y + bh / 2).attr("r", 5).attr("fill", css("--panel")).attr("stroke", css("--ink")).attr("stroke-width", 2);
+      s.append("rect").attr("x", 0).attr("y", y - 2).attr("width", W).attr("height", rowH).attr("fill", "transparent")
+        .on("mousemove", e => showTip(e, `<b>${label(p)}</b><div class="note">${p.type_descr}</div><div class="r"><span>Approved</span><span>${fmtDate(p.adopted)}</span></div><div class="r"><span>First home permit</span><span>${fmtDate(p.first_permit.date)}</span></div><div class="r"><span>Address</span><span>${p.first_permit.address || "–"}</span></div><div class="r"><span>Years</span><span>${fmt1(p.lag_years)}</span></div>` + (p.lag_years_alt != null ? `<div class="r"><span>From ${p.alt_start.label.split(" (")[0].toLowerCase()}</span><span>${fmt1(p.lag_years_alt)}</span></div>` : "") + (p.first_permit.override ? `<div class="note">${p.first_permit.override}</div>` : "")))
+        .on("mouseleave", hideTip);
+    });
+    const med = t => d3.median(rows.filter(r => r.type === t), r => r.lag_years);
+    const subj = rows.find(r => r.name === SUBJECT);
+    document.getElementById("lagkey").innerHTML = Object.values(TYPECOL).map(([c, l]) => `<span><i class="sw" style="background:var(${c})"></i>${l}</span>`).join("") + `<span><i class="sw" style="border:2px solid var(--ink);border-radius:50%;background:var(--panel)"></i>Blatchford timed from airport closure</span><span>† repealed 2024</span>`;
+    document.getElementById("lagcallout").innerHTML = subj ? `Blatchford took <b>${fmt1(subj.lag_years)} years</b> from ARP approval to its first home permit (<b>${fmt1(subj.lag_years_alt)}</b> from the airport closing). The median is <b>${fmt1(med("NASP"))}</b> years for single-neighbourhood NASPs and <b>${fmt1(med("ASP"))}</b> for multi-neighbourhood ASPs (${rows.filter(r => r.type === "NASP").length} and ${rows.filter(r => r.type === "ASP").length} plans).` : "";
+  }
+
+  const paceSel = document.getElementById("paceplan"), peerSel = document.getElementById("pacepeers"), measSel = document.getElementById("pacemeasure");
+  paceSel.innerHTML = paceable.slice().sort((a, b) => (b.name === SUBJECT) - (a.name === SUBJECT) || d3.ascending(a.name, b.name)).map(p => `<option value="${p.id}">${label(p)}</option>`).join("");
+  [paceSel, peerSel, measSel].forEach(el => el.addEventListener("change", () => { renderPace(); try { localStorage.setItem("egm-pace", JSON.stringify([paceSel.value, peerSel.value, measSel.value])); } catch (e) {} }));
+  try { const s = JSON.parse(localStorage.getItem("egm-pace") || "null"); if (s) { paceSel.value = s[0]; peerSel.value = s[1]; measSel.value = s[2]; } } catch (e) {}
+  if (!paceSel.value) paceSel.value = String(plans.find(p => p.name === SUBJECT)?.id ?? paceable[0].id);
+
+  let lagDone = false;
+  function renderPace() {
+    if (!lagDone) { renderLag(); renderPaceTable(); lagDone = true; }
+    const p = plans[+paceSel.value], key = measSel.value === "pct" ? "pct" : "cum";
+    const pool = peerSel.value === "curated" ? paceable.filter(q => CURATED.includes(q.name)) : greenfield;
+    const peers = pool.filter(q => q.id !== p.id);
+    const st = peerStats(peers, key);
+    const W = 760, H = 330, m = { t: 12, r: 16, b: 30, l: 52 };
+    const maxK = Math.max(p.pace.length, st.length ? st[st.length - 1].k : 1);
+    const x = d3.scaleLinear().domain([1, Math.max(2, maxK)]).range([m.l, W - m.r]);
+    const ymax = d3.max([...st.map(s => s.p75), ...p.pace.map(s => s[key])]) || 1;
+    const y = d3.scaleLinear().domain([0, ymax]).nice(5).range([H - m.b, m.t]);
+    const yf = key === "pct" ? d3.format(".0%") : d3.format("~s"), tf = key === "pct" ? d3.format(".1%") : fmt;
+    const s = d3.select("#pacechart").html("").append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("role", "img").attr("aria-label", `Build-out of ${label(p)} compared with peer plans`);
+    s.append("g").attr("class", "grid").selectAll("line").data(y.ticks(5)).join("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", d => y(d)).attr("y2", d => y(d));
+    s.append("g").selectAll("text").data(y.ticks(5)).join("text").attr("x", m.l - 6).attr("y", d => y(d) + 4).attr("text-anchor", "end").text(yf);
+    s.append("g").selectAll("text").data(d3.range(1, maxK + 1)).join("text").attr("x", d => x(d)).attr("y", H - 10).attr("text-anchor", "middle").text(d => "Yr " + d);
+    if (st.length) {
+      s.append("path").attr("fill", css("--s-other")).attr("opacity", 0.25).attr("d", d3.area().x(d => x(d.k)).y0(d => y(d.p25)).y1(d => y(d.p75))(st));
+      s.append("path").attr("fill", "none").attr("stroke", css("--ink-3")).attr("stroke-width", 2).attr("stroke-dasharray", "5 4").attr("d", d3.line().x(d => x(d.k)).y(d => y(d.med))(st));
+    }
+    const col = css("--accent");
+    s.append("path").attr("fill", "none").attr("stroke", col).attr("stroke-width", 2.5).attr("stroke-linejoin", "round").attr("d", d3.line().x(d => x(d.k)).y(d => y(d[key]))(p.pace));
+    const last = p.pace[p.pace.length - 1];
+    if (last) s.append("circle").attr("cx", x(last.k)).attr("cy", y(last[key])).attr("r", 5).attr("fill", css("--panel")).attr("stroke", col).attr("stroke-width", 2.5);
+    const cross = s.append("line").attr("y1", m.t).attr("y2", H - m.b).attr("stroke", css("--ink-3")).attr("stroke-dasharray", "2 2").attr("display", "none");
+    s.append("rect").attr("x", m.l).attr("y", m.t).attr("width", W - m.l - m.r).attr("height", H - m.t - m.b).attr("fill", "transparent")
+      .on("mousemove", function (e) {
+        const k = Math.max(1, Math.min(maxK, Math.round(x.invert(d3.pointer(e, this)[0]))));
+        cross.attr("x1", x(k)).attr("x2", x(k)).attr("display", null);
+        const me = p.pace[k - 1], ps = st[k - 1];
+        showTip(e, `<b>Permitting year ${k}</b>` + (me ? `<div class="r"><span>${label(p)} (${me.y}${me.y === CY ? ", to date" : ""})</span><span>${tf(me[key])}</span></div>` : "") + (ps ? `<div class="r"><span>Peer median</span><span>${tf(ps.med)}</span></div><div class="r"><span>Middle half of peers</span><span>${tf(ps.p25)}–${tf(ps.p75)}</span></div><div class="r"><span>Peers with data</span><span>${ps.n}</span></div>` : `<div class="note">Fewer than 5 peers reached this year.</div>`));
+      })
+      .on("mouseleave", () => { cross.attr("display", "none"); hideTip(); });
+    document.getElementById("pacekey").innerHTML = `<span><i class="sw" style="background:var(--accent)"></i>${label(p)}</span><span><i class="sw" style="background:var(--ink-3)"></i>Peer median (dashed)</span><span><i class="sw" style="background:var(--s-other);opacity:.5"></i>Middle half of ${peers.length} ${peerSel.value === "curated" ? "workbook peers" : "greenfield plans"}</span>`;
+    renderCatchup(p, peers);
+  }
+
+  function renderCatchup(p, peers) {
+    const T = planUnits(p), kNow = p.pace.length, now = p.toDate;
+    const stP = peerStats(peers, "pct");
+    const full = p.pace.filter(s => s.y < CY && s.k > 1);
+    const avgFull = full.length ? d3.mean(full, s => s.cum - (p.pace[s.k - 2]?.cum || 0)) : null;
+    const thisYr = p.pace.length ? now - (p.pace[kNow - 2]?.cum || 0) : 0;
+    const meNow = p.pace[kNow - 1], medNow = stP[kNow - 1];
+    const rows = stP.filter(s => s.k > kNow).slice(0, 6).map(s => {
+      const target = s.med * T, yrs = s.k - kNow;
+      return { k: s.k, yr: firstYear(p) + s.k - 1, n: s.n, med: s.med, target, need: Math.max(0, (target - now) / yrs) };
+    });
+    const yearsAt = r => r > 0 ? Math.ceil((T - now) / r) : null;
+    document.getElementById("catchup").innerHTML = `<h3 style="font-size:18px;margin-bottom:8px">Where ${label(p)} stands</h3>
+      <div class="facts tight">
+        <div><small>Planned units</small><b>${fmt(T)}</b></div>
+        <div><small>Permitted to date</small><b>${fmt(now)}</b><small>${d3.format(".1%")(now / T)} of planned</small></div>
+        <div><small>Permitting year</small><b>${kNow}</b><small>first permit ${fmtDate(p.first_permit.date)}</small></div>
+        <div><small>Peer median at year ${kNow}</small><b>${medNow ? d3.format(".1%")(medNow.med) : "–"}</b><small>${medNow && meNow ? `${d3.format("+.1f")(100 * (meNow.pct - medNow.med))} points ${meNow.pct >= medNow.med ? "ahead" : "behind"}` : ""}</small></div>
+        <div><small>${CY} to date</small><b>${fmt(thisYr)}</b><small>units permitted</small></div>
+        <div><small>Average full year</small><b>${avgFull != null ? fmt(avgFull) : "–"}</b><small>${full.length ? `${full[0].y}–${full[full.length - 1].y}` : ""}</small></div>
+      </div>
+      <p class="note" style="margin:12px 0 6px">${yearsAt(thisYr) ? `At the ${CY} rate, the remaining ${fmt(T - now)} units take about <b>${yearsAt(thisYr)} years</b>` : ""}${avgFull && yearsAt(avgFull) ? `; at the full-year average, about <b>${yearsAt(avgFull)}</b>.` : "."}</p>
+      ${rows.length ? `<h3 style="font-size:16px;margin:10px 0 4px">To catch up with the peer median</h3>
+      <div style="overflow-x:auto"><table class="catch"><thead><tr><th class="n">Year</th><th class="n">Median</th><th class="n">Units by then</th><th class="n">Per year</th></tr></thead><tbody>
+      ${rows.map(r => `<tr><td class="n">${r.k} (${r.yr})</td><td class="n">${d3.format(".0%")(r.med)}</td><td class="n">${fmt(r.target)}</td><td class="n">${fmt(r.need)}</td></tr>`).join("")}</tbody></table></div>
+      <div class="note" style="margin-top:6px">Average units a year needed from ${CY + 1} to reach the peer median's share of planned units by that permitting year. Only years where at least 5 peers have data.</div>` : `<div class="note">Too few peers have reached later permitting years to set a catch-up target.</div>`}`;
+  }
+
+  let paceSortK = "lag", paceDir = -1;
+  function renderPaceTable() {
+    const cols = [
+      ["name", "Plan", p => label(p), false], ["type", "Type", p => p.type, false], ["adopted", "Approved", p => p.adopted, false, fmtDate],
+      ["first", "First home permit", p => p.first_permit.date, false, fmtDate], ["lag", "Years to first permit", p => p.lag_years, true, fmt1],
+      ["units", "Planned units", p => planUnits(p), true], ["todate", "Permitted to date", p => p.toDate, true], ["first5", "First 5 years", p => p.first5, true],
+      ["pct", "% of planned", p => p.toDate / planUnits(p), true, d3.format(".0%")], ["r25", "Year reached 25%", p => p.reach25, true, v => "Yr " + v],
+      ["r50", "Year reached 50%", p => p.reach50, true, v => "Yr " + v], ["multi", "Row & apt share", p => p.multiShare, true, d3.format(".0%")], ["suite", "Suite share", p => p.suiteShare, true, d3.format(".0%")],
+    ];
+    const col = cols.find(c => c[0] === paceSortK);
+    const rows = paceable.slice().sort((a, b) => { const va = col[2](a), vb = col[2](b); if (va == null) return 1; if (vb == null) return -1; return paceDir * (col[3] ? va - vb : String(va).localeCompare(String(vb))); });
+    const el = document.getElementById("pacetable");
+    el.innerHTML = `<thead><tr>${cols.map(c => `<th class="${c[3] ? "n" : ""}" data-k="${c[0]}" ${c[0] === paceSortK ? `aria-sort="${paceDir > 0 ? "ascending" : "descending"}"` : ""}>${c[1]}</th>`).join("")}</tr></thead><tbody>` +
+      rows.map(p => `<tr data-id="${p.id}">${cols.map(c => { const v = c[2](p); return `<td class="${c[3] ? "n" : ""}">${v == null ? "–" : c[4] ? c[4](v) : c[3] ? fmt(v) : (c[0] === "name" ? `<b>${v}</b>${CURATED.includes(p.name) ? ' <span class="chip">workbook peer</span>' : ""}${p.repealed ? ' <span class="chip">repealed</span>' : ""}` : v)}</td>`; }).join("")}</tr>`).join("") + "</tbody>";
+    el.querySelectorAll("th").forEach(th => th.addEventListener("click", () => { if (paceSortK === th.dataset.k) paceDir *= -1; else { paceSortK = th.dataset.k; paceDir = cols.find(c => c[0] === paceSortK)[3] ? -1 : 1; } renderPaceTable(); }));
+    el.querySelectorAll("tbody tr").forEach(tr => tr.addEventListener("click", () => { paceSel.value = tr.dataset.id; renderPace(); document.getElementById("pacechart").scrollIntoView({ behavior: "smooth", block: "center" }); }));
+    const excl = plans.filter(p => planUnits(p) && p.pace_status !== "measurable" && !p.arp);
+    document.getElementById("paceexcluded").innerHTML = `<b>Not timed (${excl.length} plans):</b> ` + d3.groups(excl, p => p.pace_status).map(([s, ps]) => `${s}: ${ps.map(p => p.name).join(", ")}`).join(". ") + ".";
+  }
 
   // ---------- compare
   let picks = [];
@@ -641,6 +843,7 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
     `<b>Assessment</b>: Property Assessment Data (historical 2012–${CY - 1} plus the current ${CY} roll). The average is total residential and other-residential value divided by accounts, so a neighbourhood whose new supply is mostly condos will show a lower average than its house prices suggest.`,
     `<b>Statutory plans</b>: boundaries from <a href="${S.plans_in_effect}" target="_blank" rel="noopener">Plans in Effect</a>. Planned units, population, density and low-density share were transcribed from the Land Use &amp; Population Statistics table in each plan's office consolidation PDF (${tracked.length} NSPs and NASPs). Buildout compares estimated dwellings within the plan boundary to the plan's total units, so plans that include existing country residential lots can start above zero and older plans can exceed 100%.`,
     `<b>Redevelopment plans</b> state targets in different ways, so each is measured on its own terms. "New units" targets count net units permitted inside the plan boundary since the plan's adoption. Population targets use the 2021 census; where a plan covers only part of a neighbourhood (The Quarters is about half of Boyle Street), residents are estimated by area share. The City Centre ARP target (Blatchford) is derived from its district density objectives, since it has no statistics table.`,
+    `<b>Build-out pace</b>: approval dates come from the bylaw history at the front of each plan's office consolidation. The first home permit is the first permit that starts a run of new-home permits (at least 5 within a year and 400 m, or one building of 20+ units), so isolated houses on old acreages don't count; two plans (Horse Hill ASP, Marquis NSP) use a hand-checked date. A plan is only timed when its whole build-out is inside the permit data, which starts in 2009. Benchmarks use greenfield plans with at least 1,000 planned units. Allard, Graydon Hill and Cashman NASPs were repealed in October 2024 and use their neighbourhood boundaries. Housing types split secondary and garden suites out of house permits using the permit description; a second new-house permit at the same address is treated as a re-issue.`,
     `<b>Mix vs plan</b> compares the plan's low-density (single/semi-detached) share of units with the share of units actually permitted in the plan area since 2015. More than 10 points below plan is flagged "denser than plan"; more than 10 points above, "less dense than plan".`,
     `<b>Classification</b> (Developing / Redeveloping / Industrial) comes from the City's neighbourhood classification on development permits. Redeveloping covers mature and established neighbourhoods.`,
   ].map(t => `<li>${t}</li>`).join("");
@@ -648,7 +851,7 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
   // ---------- initial state
   let m0 = 0, nb0 = null, t0 = "map";
   try { m0 = +(localStorage.getItem("egm-metric") || 0); nb0 = localStorage.getItem("egm-nb"); t0 = localStorage.getItem("egm-tab") || "map"; } catch (e) {}
-  const h = location.hash.slice(1); if (["map", "plans", "compare", "table"].includes(h)) t0 = h;
+  const h = location.hash.slice(1); if (["map", "plans", "pace", "compare", "table"].includes(h)) t0 = h;
   msel.value = String(m0 < METRICS.length ? m0 : 0);
   paint();
   select(nb0 && byId.has(nb0) ? nb0 : nameToId.get("the orchards at ellerslie") || nbs[0].id);

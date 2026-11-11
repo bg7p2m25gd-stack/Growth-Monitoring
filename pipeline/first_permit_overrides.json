@@ -1,0 +1,5 @@
+{
+ "_about": "Hand-checked first new-subdivision residential permits, used where the automatic rule picks up permits on old rural lots. Each entry replaces the automatic first permit for that plan.",
+ "Horse Hill ASP": {"date": "2022-09-02", "address": "17431 7 Street NE", "units": 1, "note": "Earlier permits in the plan area (2010-2013) are houses and modular homes on existing acreages; subdivision building began in Marquis in Sept 2022."},
+ "Marquis NSP": {"date": "2022-09-02", "address": "17431 7 Street NE", "units": 1, "note": "Same as Horse Hill ASP: first permit on a new Marquis street."}
+}

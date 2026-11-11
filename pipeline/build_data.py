@@ -114,6 +114,92 @@ def housing_type(building_type, work_type):
     return "other"
 
 
+WORD_NUM = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+            "eleven": 11, "twelve": 12}
+SUITE_N = re.compile(r"\b(\d+|" + "|".join(WORD_NUM) + r")\s*\(?\d*\)?\s*-?\s*(?:secondary|secondry)\s+suites?", re.I)
+SUITE_ANY = re.compile(r"(?:secondary|secondry)\s+suite", re.I)
+NO_SUITE = re.compile(r"\b(?:no|not\s+to\s+be(?:\s+used\s+as)?(?:\s+an?)?)\s+(?:secondary|secondry)\s+suite|not\s+to\s+be\s+used\s+as\s+an\s+additional\s+dwelling|no\s+secondary\s+suite\s+involved", re.I)
+GARDEN = re.compile(r"garden\s+suite|garage\s+suite|backyard\s+house|laneway\s+house", re.I)
+DWELLINGS = re.compile(r"\b(\d+|" + "|".join(WORD_NUM) + r")\s*[- ]\s*(?:dwelling|unit)s?\b", re.I)
+
+
+def _n(k):
+    k = k.lower()
+    return int(k) if k.isdigit() else WORD_NUM[k]
+
+
+def split_units(r):
+    """Split a permit's added units by housing type, moving secondary and garden suites out of the
+    house types using the permit description (rules from the Blatchford pace workbook, Notes tab)."""
+    u = num(r.get("units_added"))
+    ht = housing_type(r.get("building_type"), r.get("work_type"))
+    desc = r.get("job_description") or ""
+    garden = bool(GARDEN.search(desc))
+    suite_said = bool(SUITE_ANY.search(desc)) and not NO_SUITE.search(desc)
+    if ht == "suite":
+        return {"backyard" if garden and not suite_said else "suite": u}
+    if ht == "single":
+        if garden and re.search(r"accessory", desc, re.I):
+            return {"backyard": u}
+        extra = max(u - 1, 0)
+        return {"single": u - extra, **({"backyard" if garden and not suite_said else "suite": extra} if extra else {})}
+    if ht in ("semi", "row"):
+        if garden and not re.search(r"semi-detached house|row ?hous|dwelling", desc, re.I):
+            return {"backyard": u}
+        if suite_said:
+            m = SUITE_N.search(desc)
+            if m:
+                n = _n(m.group(1))
+            else:
+                # suites mentioned without a count: everything above the house units is a suite
+                d = DWELLINGS.search(desc)
+                base = _n(d.group(1)) if d else (2 if ht == "semi" else None)
+                n = u - base if base else 0
+            n = min(max(n, 0), max(u - 1, 0))
+            if n:
+                return {ht: u - n, "suite": n}
+    return {ht: u}
+
+
+def is_house_reissue(r, seen):
+    """A second new single-detached house permit at the same address is a re-issue, not a new home."""
+    if housing_type(r.get("building_type"), r.get("work_type")) != "single":
+        return False
+    if "new" not in (r.get("work_type") or "").lower():
+        return False
+    key = (r.get("address") or "").upper().strip()
+    if not key:
+        return False
+    if key in seen:
+        return True
+    seen.add(key)
+    return False
+
+
+def first_cluster(events, min_permits=5, window_days=365, radius_m=400):
+    """First permit that starts a run of new-home permits: at least min_permits permits adding units
+    within window_days and radius_m of it, or a single permit of 20+ units. Skips isolated permits on old rural lots
+    (acreage houses, modular homes). Plans where rural lots still saw several permits in a year use
+    first_permit_overrides.json."""
+    ev = sorted(events)
+
+    def near(a, b):
+        if a[4] is None or b[4] is None:
+            return True
+        return ((a[4] - b[4]) * 111_000) ** 2 + ((a[5] - b[5]) * 66_000) ** 2 <= radius_m ** 2
+
+    for i, e in enumerate(ev):
+        d0 = dt.date.fromisoformat(e[0])
+        n = 0
+        for x in ev[i:]:
+            if (dt.date.fromisoformat(x[0]) - d0).days > window_days:
+                break
+            n += near(e, x)
+        if n >= min_permits or e[1] >= 20:
+            return e
+    return None
+
+
 def arp_progress(p, t):
     """Measure an area redevelopment plan against the target it states (units, new units or residents)."""
     out = {k: t.get(k) for k in ("measure", "value", "value_high", "value_likely", "baseline_year", "horizon_years", "stated", "stats_bylaw", "adopted", "page", "note", "pop", "pop_year")}
@@ -208,10 +294,10 @@ def main():
     # --- building permits that change dwelling counts (row level, so we can place them in plan areas)
     print("Building permits")
     bp = soql("building_permits", {
-        "$select": "year, building_type, work_type, units_added, construction_value, neighbourhood_numberr, latitude, longitude, occupancy_granted_date",
+        "$select": "issue_date, year, building_type, work_type, job_description, address, units_added, construction_value, neighbourhood_numberr, latitude, longitude, occupancy_granted_date",
         "$where": "units_added != 0",
         "$order": "row_id",
-    }, cache_key="bp_units")
+    }, cache_key="bp_units_v2")
 
     # --- plans
     print("Statutory plans")
@@ -227,6 +313,18 @@ def main():
             "bylaw": r.get("bylaw_no"),
             "pdf": r.get("pdf_url"),
             "area_ha": round(area_ha(g), 1),
+        })
+        plan_geoms.append(g)
+    with open(os.path.join(ROOT, "pipeline", "plan_targets.json")) as fh:
+        targets_all = json.load(fh)
+    for name, t in targets_all.items():
+        if name.startswith("_") or t.get("kind") != "repealed" or t["nbhd"] not in geoms:
+            continue
+        g = geoms[t["nbhd"]]
+        plans.append({
+            "id": len(plans), "name": name, "type": t["type"],
+            "type_descr": "Neighbourhood Area Structure Plan (repealed " + t["repealed"][:4] + ")",
+            "bylaw": t.get("stats_bylaw"), "pdf": t.get("pdf"), "area_ha": round(area_ha(g), 1), "repealed": t["repealed"],
         })
         plan_geoms.append(g)
 
@@ -258,47 +356,126 @@ def main():
     nb_permits = defaultdict(lambda: defaultdict(empty_year))
     plan_permits = defaultdict(lambda: defaultdict(empty_year))
     plan_tree = STRtree(plan_geoms)
-    unplaced = 0
-    for r in bp:
+    unplaced = reissues = 0
+    deferred = []
+    nb_geo_units = defaultdict(float)
+    nb_plan_units = defaultdict(lambda: defaultdict(float))
+
+    def add_permit(targets, u, parts, r):
+        for t in targets:
+            if u > 0:
+                t["units"] += u
+                for k, v in parts.items():
+                    t[k] += v
+                t["value"] += num(r.get("construction_value"))
+                if r.get("occupancy_granted_date"):
+                    t["occ"] += u
+            else:
+                t["demo"] += -u
+
+    seen_houses = set()
+    nb_events, plan_events = defaultdict(list), defaultdict(list)
+    for r in sorted(bp, key=lambda r: r.get("issue_date") or ""):
         u = num(r.get("units_added"))
         yr = r.get("year")
         if not yr:
+            continue
+        if u > 0 and is_house_reissue(r, seen_houses):
+            reissues += 1
             continue
         lat, lon = num(r.get("latitude"), None), num(r.get("longitude"), None)
         # Place by coordinates (handles renamed/split neighbourhoods); fall back to the recorded number
         nid = nid_from_point(lon, lat) if lat and lon else None
         if nid is None:
             nid = str(r.get("neighbourhood_numberr") or "").split(",")[0].split(".")[0].strip()
-        ht = housing_type(r.get("building_type"), r.get("work_type"))
+        parts = split_units(r) if u > 0 else {}
+        event = ((r.get("issue_date") or "")[:10], u, (r.get("address") or "").title(), r.get("building_type") or "", lat, lon)
         targets = []
         if nid in nbhds:
             targets.append(nb_permits[nid][yr])
+            if u > 0 and event[0]:
+                nb_events[nid].append(event)
+        plan_hits = []
         if lat and lon:
             p = Point(lon, lat)
             for pi in plan_tree.query(p):
                 if plan_geoms[int(pi)].contains(p):
+                    plan_hits.append(int(pi))
                     targets.append(plan_permits[int(pi)][yr])
+                    if u > 0 and event[0]:
+                        plan_events[int(pi)].append(event)
         else:
             unplaced += 1
-        for t in targets:
-            if u > 0:
-                t["units"] += u
-                t[ht] += u
-                t["value"] += num(r.get("construction_value"))
-                if r.get("occupancy_granted_date"):
-                    t["occ"] += u
-            else:
-                t["demo"] += -u
-    print(f"  {unplaced} unit-changing permits had no coordinates (counted for neighbourhood only)")
+            if nid in nbhds:
+                deferred.append((nid, yr, u, parts, r, event))
+        if lat and lon and nid in nbhds and u > 0:
+            nb_geo_units[nid] += u
+            for pi in plan_hits:
+                nb_plan_units[nid][pi] += u
+        add_permit(targets, u, parts, r)
+
+    # Permits without coordinates (most permits from 2024 on are not geocoded yet) go to the plans that
+    # hold at least 90% of the neighbourhood's geocoded new homes.
+    for nid, yr, u, parts, r, event in deferred:
+        tot = nb_geo_units[nid]
+        targets = []
+        for pi, v in nb_plan_units[nid].items():
+            if tot and v / tot >= 0.9:
+                targets.append(plan_permits[pi][yr])
+                if u > 0 and event[0]:
+                    plan_events[pi].append(event)
+        add_permit(targets, u, parts, r)
+    print(f"  {unplaced} unit-changing permits had no coordinates (placed by neighbourhood); {reissues} house re-issues skipped")
 
     def finalize(d):
         return {y: {k: round(v) for k, v in vals.items()} for y, vals in sorted(d.items())}
 
+    with open(os.path.join(ROOT, "pipeline", "plan_dates.json")) as fh:
+        plan_dates = json.load(fh)
+    with open(os.path.join(ROOT, "pipeline", "first_permit_overrides.json")) as fh:
+        fp_overrides = json.load(fh)
+
+    def first_permit_info(events, override=None):
+        if override:
+            return {"date": override["date"], "address": override.get("address"), "units": override.get("units"), "override": override.get("note")}
+        e = first_cluster(events)
+        if not e:
+            return None
+        big = next((x for x in sorted(events) if x[1] >= 10), None)
+        return {"date": e[0], "address": e[2], "units": round(e[1]), "type": e[3], "first_10plus": big[0] if big else None}
+
     for nid in nbhds:
         nbhds[nid]["permits"] = finalize(nb_permits[nid])
+        nbhds[nid]["first_permit"] = first_permit_info(nb_events[nid])
     for pi, p in enumerate(plans):
+        events = plan_events[pi]
+        if p.get("repealed"):
+            # repealed plans use their neighbourhood as the plan area, including permits without coordinates
+            nid = targets_all[p["name"]]["nbhd"]
+            plan_permits[pi], events = nb_permits[nid], nb_events[nid]
         p["permits"] = finalize(plan_permits[pi])
         p.setdefault("nbhds", [])
+        p["first_permit"] = first_permit_info(events, fp_overrides.get(p["name"]))
+        d = plan_dates.get(p["name"]) or {}
+        p["adopted"], p["adopt_bylaw"], p["adopt_precision"] = d.get("adopted"), d.get("bylaw"), d.get("precision")
+        if d.get("alt_start"):
+            p["alt_start"] = d["alt_start"]
+        # Measurable = the whole build-out falls inside the 2009+ permit data, and building began after adoption
+        fp = p["first_permit"]
+        early = sum(v["units"] for y, v in p["permits"].items() if int(y) == 2009)
+        if not fp:
+            p["pace_status"] = "no residential building yet"
+        elif fp["date"] < "2010-01-01" or early >= 5:
+            p["pace_status"] = "building before 2009 (start not in the data)"
+        elif p["adopted"] and fp["date"] < p["adopted"]:
+            p["pace_status"] = "building predates the plan"
+        else:
+            p["pace_status"] = "measurable"
+        if p["pace_status"] == "measurable" and p["adopted"]:
+            a = dt.date.fromisoformat(p["adopted"] + ("-15" if len(p["adopted"]) == 7 else ""))
+            p["lag_years"] = round((dt.date.fromisoformat(fp["date"]) - a).days / 365.25, 2)
+            if p.get("alt_start"):
+                p["lag_years_alt"] = round((dt.date.fromisoformat(fp["date"]) - dt.date.fromisoformat(p["alt_start"]["date"])).days / 365.25, 2)
 
     # --- assessment: historical (2012..last year) + current year
     print("Assessments")
@@ -499,6 +676,15 @@ def main():
             dw += share_n * n["dwell"].get("2021", 0)
         p["pop_2021_est"] = round(pop)
         p["dwell_2021_est"] = round(dw)
+        # An area that already had a few hundred homes before its first permit in the data was built
+        # (or redeveloping) before 2009, so its start can't be timed from permits.
+        if p.get("pace_status") == "measurable" and not (p.get("first_permit") or {}).get("override"):
+            permitted = sum(v["units"] - v["demo"] for y, v in p["permits"].items() if int(y) <= 2020)
+            permitted += 0.4 * (p["permits"].get("2021", {}).get("units", 0) - p["permits"].get("2021", {}).get("demo", 0))
+            if dw - permitted > 300:
+                p["pace_status"] = "homes existed before 2009 (start not in the data)"
+                p.pop("lag_years", None)
+                p.pop("lag_years_alt", None)
 
     # approved buildout statistics transcribed from each plan's Land Use & Population Statistics table
     with open(os.path.join(ROOT, "pipeline", "plan_targets.json")) as fh:

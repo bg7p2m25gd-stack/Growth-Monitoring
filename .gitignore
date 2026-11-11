@@ -2,3 +2,6 @@
 cache/
 __pycache__/
 .DS_Store
+
+# Working files that should not be published
+*.xlsx
