@@ -333,7 +333,7 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
   const tracked = plans.filter(p => p.target && p.target.units && !p.arp);
   const arps = plans.filter(p => p.arp);
   const remaining = d3.sum(tracked, p => p.remaining_units || 0);
-  document.getElementById("asof").innerHTML = `Data refreshed <span class="mono">${D.generated.replace("T", " ")}</span>`;
+  document.getElementById("asof").innerHTML = `Data refreshed <span class="mono">${D.generated.replace("T", " ")}</span> · updates weekly`;
   document.getElementById("kpis").innerHTML = [
     [fmt(d3.sum(nbs, n => n.pop["2021"] || 0)), "Population, 2021 federal census"],
     [fmt(sumY(String(LY)) - sumY(String(LY), "demo")), `Net units permitted in ${LY}`],

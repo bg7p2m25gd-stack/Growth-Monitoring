@@ -1,0 +1,46 @@
+name: Refresh data
+
+# Runs every Monday at 6:00 Edmonton time, and on demand from the Actions tab ("Run workflow").
+on:
+  schedule:
+    - cron: "0 12 * * 1"   # 12:00 UTC = 6:00 MDT / 5:00 MST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TZ: America/Edmonton
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Pull City of Edmonton open data and rebuild
+        run: python -W ignore pipeline/build_data.py
+
+      - name: Commit updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Refresh data $(date +'%Y-%m-%d')"
+            git push
+          fi

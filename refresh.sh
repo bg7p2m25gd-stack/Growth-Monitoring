@@ -1,6 +1,6 @@
 #!/bin/bash
 # Refresh the Edmonton Growth Monitor data from data.edmonton.ca.
-# First run: python3 -m venv .venv && .venv/bin/pip install shapely pyproj pypdf requests pypdfium2 pillow
+# First run: python3 -m venv .venv && .venv/bin/pip install -r requirements.txt pypdf pypdfium2 pillow
 set -e
 cd "$(dirname "$0")"
 rm -f cache/api/*.json            # force fresh pulls (otherwise cached for 20 hours)

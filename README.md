@@ -13,6 +13,11 @@ buildout targets in approved statutory plans (NSPs / NASPs).
 - `refresh.sh` — re-pulls all data.
 
 ## Refresh
+The data refreshes automatically every Monday at 6:00 (Edmonton time) via GitHub Actions
+(`.github/workflows/refresh-data.yml`). To refresh on demand: GitHub repo → **Actions** →
+**Refresh data** → **Run workflow**. The live site updates a minute or two after the run finishes.
+
+To refresh locally instead:
 ```
 ./refresh.sh
 ```
