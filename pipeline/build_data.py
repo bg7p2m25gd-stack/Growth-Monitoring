@@ -116,11 +116,19 @@ def housing_type(building_type, work_type):
 
 WORD_NUM = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
             "eleven": 11, "twelve": 12}
-SUITE_N = re.compile(r"\b(\d+|" + "|".join(WORD_NUM) + r")\s*\(?\d*\)?\s*-?\s*(?:secondary|secondry)\s+suites?", re.I)
+SUITE_N = re.compile(r"\b(\d+|" + "|".join(WORD_NUM) + r")\s*\(?\d*\)?\s*-?\s*(?:new\s+)?(?:secondary|secondry)\s+suites?", re.I)
 SUITE_ANY = re.compile(r"(?:secondary|secondry)\s+suite", re.I)
-NO_SUITE = re.compile(r"\b(?:no|not\s+to\s+be(?:\s+used\s+as)?(?:\s+an?)?)\s+(?:secondary|secondry)\s+suite|not\s+to\s+be\s+used\s+as\s+an\s+additional\s+dwelling|no\s+secondary\s+suite\s+involved", re.I)
+NO_SUITE = re.compile(r"\bno(?:t)?\b[^.;]{0,30}?(?:secondary|secondry)\s+suite|not\s+(?:to\s+be\s+)?(?:used\s+)?(?:as\s+)?an?\s+additional\s+dwelling", re.I)
 GARDEN = re.compile(r"garden\s+suite|garage\s+suite|backyard\s+house|laneway\s+house", re.I)
 DWELLINGS = re.compile(r"\b(\d+|" + "|".join(WORD_NUM) + r")\s*[- ]\s*(?:dwelling|unit)s?\b", re.I)
+FIRE = re.compile(r"fire\s+(?:repair|restoration|damage)|repair\s+fire|restor\w*\s+(?:after|from)\s+fire", re.I)
+STAGED_WORK = re.compile(r"foundation|footing|structural frame|excavation", re.I)
+NEW_HOMES = re.compile(r"dwelling|\bunits?\b|suite|bachelor|bedroom|sleeping|convert|conversion|change (?:the )?use|to residential", re.I)
+BASE_UNITS = {"single": 1, "semi": 2}
+# alteration permits only add homes when the description says so
+ADDS_HOMES = re.compile(r"\badd\w*|additional|new\s+(?:dwelling|unit|suite)|c(?:on)?vert|conversion|change\s+(?:the\s+|of\s+)?use|changes?\s+\w+\s+to\b"
+                        r"|increas\w*\s+(?:the\s+)?(?:number|units|dwellings)|(?:creat|construct|develop)\w*\s+(?:\w+\s+){0,4}(?:dwelling|unit|suite)", re.I)
+NOT_HOMES = re.compile(r"demolish|solar|riser|glazing|exhaust|sprinkler|fire\s+alarm|elevator|envelope|re-?roof", re.I)
 
 
 def _n(k):
@@ -129,50 +137,91 @@ def _n(k):
 
 
 def split_units(r):
-    """Split a permit's added units by housing type, moving secondary and garden suites out of the
-    house types using the permit description (rules from the Blatchford pace workbook, Notes tab)."""
+    """Split a permit's added units by housing type, moving secondary and garden suites out of the house
+    types using the permit description. Units that the description shows are not new homes go under
+    "excluded" (coding errors such as fire repairs, or an extra unit on a house whose basement is
+    'not to be used as a secondary suite'). See README > Unit counting rules."""
     u = num(r.get("units_added"))
+    w = (r.get("work_type") or "").lower()
     ht = housing_type(r.get("building_type"), r.get("work_type"))
     desc = r.get("job_description") or ""
     garden = bool(GARDEN.search(desc))
-    suite_said = bool(SUITE_ANY.search(desc)) and not NO_SUITE.search(desc)
+    m = SUITE_N.search(desc)
+    explicit = _n(m.group(1)) if m else None
+    negated = bool(NO_SUITE.search(desc))
+    suite_said = bool(SUITE_ANY.search(desc)) and (explicit is not None or not negated)
+
+    if FIRE.search(desc):
+        return {"excluded": u}
+    is_new = "new" in w
+    if not is_new and ht in ("apartment", "row", "semi") and "add suites" not in w and "convert" not in w:
+        alteration = "alteration" in w
+        adds = bool(ADDS_HOMES.search(desc))
+        if not NEW_HOMES.search(desc) or (not adds and (alteration or NOT_HOMES.search(desc))):
+            return {"excluded": u}   # a unit count on a permit that describes no new homes (coding error)
+    if "add suites" in w and (r.get("building_type") or "").lower().startswith(("apartment", "mixed")):
+        return {"apartment": u}  # new apartments inside an existing apartment or mixed-use building
     if ht == "suite":
         return {"backyard" if garden and not suite_said else "suite": u}
     if ht == "single":
-        if garden and re.search(r"accessory", desc, re.I):
+        if garden and (re.search(r"accessory|garage", desc, re.I) and not re.search(r"single detached house", desc, re.I)):
             return {"backyard": u}
-        extra = max(u - 1, 0)
-        return {"single": u - extra, **({"backyard" if garden and not suite_said else "suite": extra} if extra else {})}
-    if ht in ("semi", "row"):
-        if garden and not re.search(r"semi-detached house|row ?hous|dwelling", desc, re.I):
-            return {"backyard": u}
-        if suite_said:
-            m = SUITE_N.search(desc)
-            if m:
-                n = _n(m.group(1))
-            else:
-                # suites mentioned without a count: everything above the house units is a suite
-                d = DWELLINGS.search(desc)
-                base = _n(d.group(1)) if d else (2 if ht == "semi" else None)
-                n = u - base if base else 0
-            n = min(max(n, 0), max(u - 1, 0))
-            if n:
-                return {ht: u - n, "suite": n}
+        if not is_new and SUITE_ANY.search(desc) and not negated:
+            return {"suite": u}  # suite added to an existing house
+    if ht in ("semi", "row") and garden and not re.search(r"semi-detached house|row ?hous|dwelling", desc, re.I):
+        return {"backyard": u}
+    if ht in ("single", "semi"):
+        base = BASE_UNITS[ht]
+        extra = max(u - base, 0)
+        if not extra:
+            return {ht: u}
+        if negated and explicit is None and not garden:
+            return {ht: u - extra, "excluded": extra}
+        return {ht: u - extra, ("backyard" if garden and not suite_said else "suite"): extra}
+    if ht == "row" and SUITE_ANY.search(desc):
+        d = DWELLINGS.search(desc) if "part of" not in desc.lower() else None
+        if explicit is not None:
+            n = explicit
+        elif d:
+            # suites named per unit ("suites in units 43 and 44"): units above the stated dwellings are suites
+            n = u - _n(d.group(1))
+        else:
+            n = 0
+        n = min(max(n, 0), max(u - 1, 0))
+        if n:
+            return {"row": u - n, "suite": n}
     return {ht: u}
 
 
-def is_house_reissue(r, seen):
-    """A second new single-detached house permit at the same address is a re-issue, not a new home."""
+def staged_duplicates(rows):
+    """Foundation / structural-frame permits that list the same units as the building's own "New" permit.
+    Returns the ids (positions in rows) to skip."""
+    new_at = defaultdict(float)
+    for r in rows:
+        if num(r.get("units_added")) > 0 and "new" in (r.get("work_type") or "").lower():
+            new_at[(r.get("address") or "").upper().strip()] += num(r.get("units_added"))
+    return {i for i, r in enumerate(rows)
+            if num(r.get("units_added")) > 0 and STAGED_WORK.search(r.get("work_type") or "")
+            and new_at.get((r.get("address") or "").upper().strip())}
+
+
+def is_house_reissue(r, seen, demolished=None):
+    """A second new single-detached house permit at the same address is a re-issue of a lapsed permit,
+    not a new home. Garage and garden suites, and rebuilds after a demolition, are kept."""
     if housing_type(r.get("building_type"), r.get("work_type")) != "single":
         return False
-    if "new" not in (r.get("work_type") or "").lower():
+    if "new" not in (r.get("work_type") or "").lower() or GARDEN.search(r.get("job_description") or ""):
         return False
     key = (r.get("address") or "").upper().strip()
     if not key:
         return False
+    date = (r.get("issue_date") or "")[:10]
     if key in seen:
+        if demolished and any(seen[key] <= d <= date for d in demolished.get(key, [])):
+            seen[key] = date
+            return False
         return True
-    seen.add(key)
+    seen[key] = date
     return False
 
 
@@ -357,6 +406,7 @@ def main():
     plan_permits = defaultdict(lambda: defaultdict(empty_year))
     plan_tree = STRtree(plan_geoms)
     unplaced = reissues = 0
+    excluded_units = defaultdict(float)
     deferred = []
     nb_geo_units = defaultdict(float)
     nb_plan_units = defaultdict(lambda: defaultdict(float))
@@ -373,22 +423,40 @@ def main():
             else:
                 t["demo"] += -u
 
-    seen_houses = set()
+    seen_houses = {}
+    bp = sorted(bp, key=lambda r: r.get("issue_date") or "")
+    staged = staged_duplicates(bp)
+    demolished = defaultdict(list)
+    for r in bp:
+        if num(r.get("units_added")) < 0:
+            demolished[(r.get("address") or "").upper().strip()].append((r.get("issue_date") or "")[:10])
     nb_events, plan_events = defaultdict(list), defaultdict(list)
-    for r in sorted(bp, key=lambda r: r.get("issue_date") or ""):
+    for i, r in enumerate(bp):
         u = num(r.get("units_added"))
         yr = r.get("year")
         if not yr:
             continue
-        if u > 0 and is_house_reissue(r, seen_houses):
-            reissues += 1
+        if u > 0 and i in staged:
+            excluded_units["staged duplicate (foundation/frame permit)"] += u
             continue
+        if u > 0 and is_house_reissue(r, seen_houses, demolished):
+            reissues += 1
+            excluded_units["house permit re-issue"] += u
+            continue
+        if u > 0:
+            parts = split_units(r)
+            bad = parts.pop("excluded", 0)
+            if bad:
+                excluded_units["description shows no new home" if bad == u else "extra unit on a house marked 'not a suite'"] += bad
+            u -= bad
+            if u <= 0:
+                continue
         lat, lon = num(r.get("latitude"), None), num(r.get("longitude"), None)
         # Place by coordinates (handles renamed/split neighbourhoods); fall back to the recorded number
         nid = nid_from_point(lon, lat) if lat and lon else None
         if nid is None:
             nid = str(r.get("neighbourhood_numberr") or "").split(",")[0].split(".")[0].strip()
-        parts = split_units(r) if u > 0 else {}
+        parts = parts if u > 0 else {}
         event = ((r.get("issue_date") or "")[:10], u, (r.get("address") or "").title(), r.get("building_type") or "", lat, lon)
         targets = []
         if nid in nbhds:
@@ -426,6 +494,7 @@ def main():
                     plan_events[pi].append(event)
         add_permit(targets, u, parts, r)
     print(f"  {unplaced} unit-changing permits had no coordinates (placed by neighbourhood); {reissues} house re-issues skipped")
+    print("  units excluded:", {k: round(v) for k, v in excluded_units.items()})
 
     def finalize(d):
         return {y: {k: round(v) for k, v in vals.items()} for y, vals in sorted(d.items())}
@@ -724,6 +793,7 @@ def main():
 
     out = {
         "generated": now.isoformat(timespec="minutes"),
+        "unit_exclusions": {k: round(v) for k, v in excluded_units.items()},
         "current_year": now.year,
         "sources": {k: f"https://data.edmonton.ca/d/{v}" for k, v in DATASETS.items()},
         "neighbourhoods": list(nbhds.values()),
