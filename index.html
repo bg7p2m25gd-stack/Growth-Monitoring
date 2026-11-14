@@ -170,6 +170,12 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
 .leader { display: block; white-space: nowrap; }
 .leader small { color: var(--ink-3); font-family: var(--f-data); font-size: 11.5px; }
 #ranktable td.rk { color: var(--ink-3); font-family: var(--f-data); width: 3ch; }
+#contribtable td, #contribtable th { padding: 6px 9px; }
+#contribtable td.c { text-align: right; white-space: nowrap; }
+#contribtable td.c small { display: block; color: var(--ink-3); font-family: var(--f-data); font-size: 11.5px; }
+#contribtable td.hl, #contribtable th.hl { background: var(--rule-2); }
+#contribtable tbody tr { cursor: default; }
+#contribtable tr.sel td { box-shadow: inset 0 1px 0 var(--accent), inset 0 -1px 0 var(--accent); }
 .btn { background: var(--panel); border: 1px solid var(--rule); border-radius: 4px; padding: 6px 12px; cursor: pointer; font-size: 13px; color: var(--ink); }
 .btn:hover { border-color: var(--ink-3); }
 .callout { font-size: 15px; color: var(--ink-2); max-width: 80ch; margin: 4px 0 12px; }
@@ -334,6 +340,16 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
         <div class="tablewrap"><table id="leadtable"></table></div>
       </div>
     </div>
+
+    <div class="tablehead"><div><h2 id="contribtitle">Neighbourhood contribution by year</h2><div class="note">Units the neighbourhood was permitted each year, and its share of the city-wide total for that housing type that year. The last column is its share of all new units in the city. Click a neighbourhood in the ranking to show it here.</div></div></div>
+    <div class="controls">
+      <label for="contribnb">Neighbourhood
+        <input type="search" id="contribnb" list="nblist" placeholder="Type a name">
+      </label>
+      <button class="btn" id="contribcsv" type="button" style="align-self:end">Download CSV</button>
+    </div>
+    <div class="callout" id="contribcallout"></div>
+    <div class="tablewrap"><table id="contribtable"></table></div>
   </section>
 
   <section id="panel-compare" hidden>
@@ -855,6 +871,7 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
     try { localStorage.setItem("egm-rank", JSON.stringify([rkType.value, rkYear.value, rkSet.value, rkTop.value])); } catch (e) {}
     const k = rkType.value, ys = yearsOf(rkYear.value);
     const cityTotal = d3.sum(nbs, n => unitsIn(n, k, ys));
+    const cityAll = d3.sum(nbs, n => unitsIn(n, "units", ys));
     const pool = nbs.filter(inSet).map(n => {
       const v = unitsIn(n, k, ys), all = unitsIn(n, "units", ys);
       return { n, v, all, share: cityTotal ? v / cityTotal : 0, own: all ? v / all : null };
@@ -871,11 +888,12 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
       : `No ${typeLabel(k).toLowerCase()} units were permitted in ${periodLabel()}.`;
     const ownHead = k === "units" ? "Single detached share" : `${typeLabel(k)} share of its permits`;
     const ownVal = r => k === "units" ? (r.all ? unitsIn(r.n, "single", ys) / r.all : null) : r.own;
-    document.getElementById("ranktable").innerHTML = `<thead><tr><th class="n">#</th><th>Neighbourhood</th><th>District</th><th class="n">Units</th><th class="n">% of city</th><th class="n">Cumulative</th><th class="n">${ownHead}</th></tr></thead><tbody>` +
+    document.getElementById("ranktable").innerHTML = `<thead><tr><th class="n">#</th><th>Neighbourhood</th><th>District</th><th class="n">Units</th><th class="n">% of city ${k === "units" ? "units" : typeLabel(k).toLowerCase()}</th>${k === "units" ? "" : `<th class="n">% of all city units</th>`}<th class="n" title="Share of the city total held by this neighbourhood and every neighbourhood ranked above it">Running share</th><th class="n">${ownHead}</th></tr></thead><tbody>` +
       top.map(r => `<tr data-id="${r.n.id}"><td class="rk n">${r.rank}</td><td><b>${r.n.name}</b>${r.n.class !== "Developing" ? ` <span class="chip">${r.n.class}</span>` : ""}</td><td>${r.n.district || ""}</td><td class="n">${fmt(r.v)}</td>
-        <td class="n">${d3.format(".1%")(r.share)}<span class="mini"><i style="width:${100 * r.share / maxShare}%"></i></span></td><td class="n">${d3.format(".0%")(r.cum)}</td><td class="n">${ownVal(r) != null ? d3.format(".0%")(ownVal(r)) : "–"}</td></tr>`).join("") +
-      (top.length ? "" : `<tr><td colspan="7" class="note">No neighbourhoods with units in this period.</td></tr>`) + "</tbody>";
-    document.querySelectorAll("#ranktable tbody tr[data-id]").forEach(tr => tr.addEventListener("click", () => { setTab("map"); select(tr.dataset.id); }));
+        <td class="n">${d3.format(".1%")(r.share)}<span class="mini"><i style="width:${100 * r.share / maxShare}%"></i></span></td>${k === "units" ? "" : `<td class="n">${cityAll ? d3.format(".1%")(r.v / cityAll) : "–"}</td>`}<td class="n">${d3.format(".0%")(r.cum)}</td><td class="n">${ownVal(r) != null ? d3.format(".0%")(ownVal(r)) : "–"}</td></tr>`).join("") +
+      (top.length ? "" : `<tr><td colspan="8" class="note">No neighbourhoods with units in this period.</td></tr>`) + "</tbody>";
+    document.querySelectorAll("#ranktable tbody tr[data-id]").forEach(tr => tr.addEventListener("click", () => { contribId = tr.dataset.id; renderContrib(); document.getElementById("contribtitle").scrollIntoView({ behavior: "smooth", block: "start" }); }));
+    renderContrib();
 
     // leaders by year
     document.getElementById("leadtitle").textContent = `${typeLabel(k)}: leaders by year`;
@@ -890,10 +908,50 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
     document.querySelectorAll("#leadtable tbody tr").forEach(tr => tr.addEventListener("click", () => { rkYear.value = tr.dataset.y; renderRankings(); }));
   }
   [rkType, rkYear, rkSet, rkTop].forEach(el => el.addEventListener("change", renderRankings));
+
+  // neighbourhood contribution by year
+  let contribId = null;
+  try { contribId = localStorage.getItem("egm-contrib"); } catch (e) {}
+  if (!byId.has(contribId)) contribId = nameToId.get("blatchford area") || nbs[0].id;
+  const CT = RK_TYPES.slice(1).concat([["units", "All units"]]);
+  const cityYear = {};
+  for (const y of d3.range(2009, CY + 1).map(String)) { cityYear[y] = {}; for (const [k] of RK_TYPES) cityYear[y][k] = d3.sum(nbs, n => (n.permits[y] || {})[k] || 0); }
+  function contribRows(n) {
+    return d3.range(CY, 2008, -1).map(String).map(y => {
+      const p = n.permits[y] || {};
+      return { y, cells: CT.map(([k]) => ({ k, v: p[k] || 0, share: cityYear[y][k] ? (p[k] || 0) / cityYear[y][k] : null })) };
+    });
+  }
+  function renderContrib() {
+    const n = byId.get(contribId); if (!n) return;
+    try { localStorage.setItem("egm-contrib", contribId); } catch (e) {}
+    document.getElementById("contribnb").value = n.name;
+    document.getElementById("contribtitle").textContent = `${n.name}: contribution by year`;
+    const rows = contribRows(n), hk = rkType.value, hy = rkYear.value;
+    const ys = yearsOf(hy), v = unitsIn(n, hk, ys), tot = d3.sum(nbs, m => unitsIn(m, hk, ys)), all = d3.sum(nbs, m => unitsIn(m, "units", ys));
+    document.getElementById("contribcallout").innerHTML = v
+      ? `In ${periodLabel()}, ${n.name} was permitted <b>${fmt(v)}</b> ${hk === "units" ? "new units" : typeLabel(hk).toLowerCase() + " units"}: <b>${d3.format(".1%")(v / tot)}</b> of the city's ${hk === "units" ? "new units" : typeLabel(hk).toLowerCase() + " units"}${hk === "units" ? "" : ` and <b>${d3.format(".1%")(v / all)}</b> of all new units in the city`}.`
+      : `${n.name} had no ${hk === "units" ? "new units" : typeLabel(hk).toLowerCase() + " units"} permitted in ${periodLabel()}.`;
+    const cell = (c, hl) => `<td class="c${hl ? " hl" : ""}">${c.v ? fmt(c.v) : "–"}${c.v && c.share != null ? `<small>${c.share >= 0.001 ? d3.format(".1%")(c.share) : "<0.1%"}</small>` : ""}</td>`;
+    const sumRow = CT.map(([k]) => { const vv = d3.sum(rows, r => r.cells.find(c => c.k === k).v); const t = d3.sum(Object.values(cityYear), cy => cy[k]); return { k, v: vv, share: t ? vv / t : null }; });
+    document.getElementById("contribtable").innerHTML = `<thead><tr><th>Year</th>${CT.map(([k, l]) => `<th class="n${k === hk ? " hl" : ""}">${l}</th>`).join("")}</tr></thead><tbody>` +
+      rows.map(r => `<tr class="${ys.includes(r.y) ? "sel" : ""}"><td class="mono">${r.y}${r.y === String(CY) ? "*" : ""}</td>${r.cells.map(c => cell(c, c.k === hk)).join("")}</tr>`).join("") +
+      `<tr><td><b>2009–${CY}</b></td>${sumRow.map(c => cell(c, c.k === hk)).join("")}</tr></tbody>`;
+  }
+  document.getElementById("contribnb").addEventListener("change", e => { const id = nameToId.get(e.target.value.toLowerCase()); if (id) { contribId = id; renderContrib(); } });
+  document.getElementById("contribcsv").addEventListener("click", () => {
+    const n = byId.get(contribId), q = s => `"${String(s).replace(/"/g, '""')}"`;
+    const head = ["Year"].concat(CT.flatMap(([, l]) => [`${l} units`, `${l} share of city`]));
+    const lines = [head.map(q).join(",")].concat(contribRows(n).map(r => [r.y].concat(r.cells.flatMap(c => [c.v, c.share != null ? c.share.toFixed(4) : ""])).join(",")));
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = `edmonton-${n.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-contribution-by-year.csv`;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  });
   document.getElementById("rkcsv").addEventListener("click", () => {
     const k = rkType.value, q = s => `"${String(s).replace(/"/g, '""')}"`;
-    const lines = [["Rank", "Neighbourhood", "Neighbourhood number", "Type", "District", "Ward", `${typeLabel(k)} units`, "Share of city total", "Cumulative share", "Share of its own units"].join(",")]
-      .concat(rkRows.map(r => [r.rank, q(r.n.name), r.n.id, q(r.n.class), q(r.n.district || ""), q(r.n.ward || ""), r.v, r.share.toFixed(4), r.cum.toFixed(4), r.own != null ? r.own.toFixed(4) : ""].join(",")));
+    const lines = [["Rank", "Neighbourhood", "Neighbourhood number", "Type", "District", "Ward", `${typeLabel(k)} units`, `Share of city ${typeLabel(k).toLowerCase()} units`, "Share of all city units", "Running share", "Share of its own units"].join(",")]
+      .concat(rkRows.map(r => [r.rank, q(r.n.name), r.n.id, q(r.n.class), q(r.n.district || ""), q(r.n.ward || ""), r.v, r.share.toFixed(4), (r.v / d3.sum(nbs, n => unitsIn(n, "units", yearsOf(rkYear.value)))).toFixed(4), r.cum.toFixed(4), r.own != null ? r.own.toFixed(4) : ""].join(",")));
     const blob = new Blob([lines.join("\n")], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
