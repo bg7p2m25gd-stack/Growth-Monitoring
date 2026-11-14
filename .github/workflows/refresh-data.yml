@@ -33,6 +33,10 @@ jobs:
       - name: Pull City of Edmonton open data and rebuild
         run: python -W ignore pipeline/build_data.py
 
+      - name: Pull CMHC housing starts
+        # CMHC outages shouldn't block the City data refresh: keep last week's file and flag it
+        run: python -W ignore pipeline/build_cmhc.py || echo "::warning::CMHC fetch failed; kept the previous data/cmhc.json"
+
       - name: Commit updated data
         run: |
           git config user.name "github-actions[bot]"

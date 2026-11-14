@@ -5,3 +5,5 @@ __pycache__/
 
 # Working files that should not be published
 *.xlsx
+# Manual CMHC exports (the pipeline now fetches CMHC data itself)
+CMHC Data/

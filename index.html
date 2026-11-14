@@ -165,6 +165,19 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
 @media (max-width: 1000px) { .cmpgrid { grid-template-columns: minmax(0, 1fr); } }
 .pacegrid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 20px; align-items: start; }
 @media (max-width: 1000px) { .pacegrid { grid-template-columns: minmax(0, 1fr); } }
+.cmhcgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
+@media (max-width: 1000px) { .cmhcgrid { grid-template-columns: minmax(0, 1fr); } }
+.explain { background: var(--panel); border: 1px solid var(--rule); border-left: 4px solid var(--accent); padding: 14px 18px; margin-bottom: 18px; }
+.explain h2 { font-size: 21px; margin-bottom: 6px; }
+.explain table { font-size: 13.5px; }
+.explain td, .explain th { white-space: normal; vertical-align: top; padding: 7px 10px; }
+.explain tbody tr { cursor: default; }
+.explain tbody tr:hover td { background: none; }
+.explain td:first-child { font-weight: 600; color: var(--ink); width: 13ch; }
+.explain .bottom { margin: 10px 0 0; color: var(--ink-2); max-width: 95ch; }
+.kpis.cm { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 4px; }
+@media (max-width: 900px) { .kpis.cm { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.chart h3 { font-size: 18px; margin-bottom: 2px; }
 .rankgrid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
 @media (max-width: 1350px) { .rankgrid { grid-template-columns: minmax(0, 1fr); } }
 .leader { display: block; white-space: nowrap; }
@@ -214,6 +227,7 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
     <button class="tab" role="tab" id="tab-plans" aria-selected="false" data-tab="plans">Plan buildout</button>
     <button class="tab" role="tab" id="tab-pace" aria-selected="false" data-tab="pace">Build-out pace</button>
     <button class="tab" role="tab" id="tab-rankings" aria-selected="false" data-tab="rankings">Rankings</button>
+    <button class="tab" role="tab" id="tab-cmhc" aria-selected="false" data-tab="cmhc">Housing starts (CMHC)</button>
     <button class="tab" role="tab" id="tab-compare" aria-selected="false" data-tab="compare">Compare</button>
     <button class="tab" role="tab" id="tab-table" aria-selected="false" data-tab="table">All neighbourhoods</button>
   </div>
@@ -352,6 +366,68 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
     <div class="tablewrap"><table id="contribtable"></table></div>
   </section>
 
+  <section id="panel-cmhc" hidden>
+    <div class="explain">
+      <h2>Building permits and housing starts measure different things</h2>
+      <p class="note" style="margin:0 0 8px">The other tabs count units on City of Edmonton building permits. This tab uses CMHC housing starts. They describe the same building activity at different stages, with different rules, so they won't match in any given year.</p>
+      <div style="overflow-x:auto"><table>
+        <thead><tr><th></th><th>City of Edmonton building permit</th><th>CMHC housing start</th></tr></thead>
+        <tbody>
+          <tr><td>What it is</td><td>Approval from the City to build. Issued before construction begins.</td><td>Confirmation that construction has begun: usually when concrete is poured for the whole footing around the building.</td></tr>
+          <tr><td>Who records it</td><td>The City's permit system, when the permit is issued.</td><td>CMHC's Starts and Completions Survey, through site visits by enumerators.</td></tr>
+          <tr><td>Timing</td><td>Counted on the issue date. A building appears here first, and some permits are never built or are re-issued.</td><td>Counted in the month construction starts, often months after the permit. A large building is a single start for all its units.</td></tr>
+          <tr><td>What counts as a unit</td><td>The change in dwelling units on the permit, including secondary suites, garden suites and office-to-residential conversions.</td><td>New self-contained units on new permanent foundations. Renovations and alterations inside existing buildings are excluded, so suites added to existing homes and conversions are not starts. Nursing homes, hotels and lodging houses are excluded too.</td></tr>
+          <tr><td>Housing types</td><td>The City's building-type labels. Stacked and "multi-unit" townhouses are often filed as row houses.</td><td>Single, semi-detached, row (3 or more side-by-side units), and "apartment and other", which includes stacked townhouses, duplexes and triplexes.</td></tr>
+          <tr><td>Tenure</td><td>Not recorded.</td><td>Intended market: homeowner, rental, condo or co-op. "Rental" means built to be rented, regardless of who finances it (purpose-built rental).</td></tr>
+          <tr><td>Geography</td><td>Each permit's address, so by neighbourhood.</td><td>City of Edmonton and the Edmonton region (CMA) on this tab; not by neighbourhood.</td></tr>
+        </tbody>
+      </table></div>
+      <p class="bottom">Use permits to see where, and what, the City is approving. Use starts to see what construction actually began and who it is being built for. Over several years the two move together; in a single year, timing and definitions keep them apart.</p>
+    </div>
+
+    <div class="controls">
+      <label for="cmgeo">Area
+        <select id="cmgeo"><option value="city">City of Edmonton</option><option value="cma">Edmonton region (CMA)</option></select>
+      </label>
+      <label for="cmmarket">Intended market
+        <select id="cmmarket">
+          <option value="All">All markets</option>
+          <option value="Rental">Purpose-built rental</option>
+          <option value="Homeowner">Homeowner (freehold)</option>
+          <option value="Condo">Condominium</option>
+          <option value="Co-Op">Co-op</option>
+        </select>
+      </label>
+      <label for="cmseries">Measure
+        <select id="cmseries">
+          <option value="starts">Starts</option>
+          <option value="completions">Completions</option>
+          <option value="under_construction">Under construction (end of period)</option>
+        </select>
+      </label>
+      <label for="cmfreq">View
+        <select id="cmfreq"><option value="year">By year</option><option value="month">By month</option></select>
+      </label>
+    </div>
+    <div class="kpis cm" id="cmkpis"></div>
+
+    <div class="card chart" style="margin-top:16px"><h3 id="cmmaintitle"></h3><div class="note" id="cmmainnote"></div><div class="serieskey" id="cmmainkey"></div><div id="cmmain"></div></div>
+
+    <div class="cmhcgrid" style="margin-top:20px">
+      <div class="card chart"><h3>Starts by intended market</h3><div class="note">Who new homes are being built for. Dwelling type follows the selector below.</div>
+        <div class="controls" style="margin:8px 0 4px"><label for="cmmixtype">Dwelling type <select id="cmmixtype"><option value="all">All types</option><option value="single">Single detached</option><option value="semi">Semi-detached</option><option value="row">Row</option><option value="apartment">Apartment and other</option></select></label></div>
+        <div class="serieskey" id="cmmixkey"></div><div id="cmmix"></div></div>
+      <div class="card chart"><h3>Purpose-built rental share of starts</h3><div class="note">Rental starts as a share of all starts, for the selected area and dwelling type.</div><div id="cmrentshare" style="margin-top:46px"></div></div>
+      <div class="card chart"><h3>Building permits and starts, City of Edmonton</h3><div class="note">Units on building permits issued against CMHC starts each year. Expect gaps from timing and definitions (see above). Permits for "Apartment and other" include suites and conversions, which CMHC counts differently or not at all.</div>
+        <div class="controls" style="margin:8px 0 4px"><label for="cmpermtype">Dwelling type <select id="cmpermtype"><option value="all">All types</option><option value="single">Single detached</option><option value="semi">Semi-detached</option><option value="row">Row</option><option value="apartment">Apartment and other</option></select></label></div>
+        <div class="serieskey" id="cmpermkey"></div><div id="cmperm"></div></div>
+      <div class="card chart"><h3>City of Edmonton share of regional starts</h3><div class="note">City starts as a share of all starts in the Edmonton CMA, for the selected market.</div><div id="cmshare" style="margin-top:46px"></div></div>
+    </div>
+
+    <div class="tablehead"><div><h2 id="cmtabletitle">Annual figures</h2><div class="note" id="cmtablenote"></div></div><button class="btn" id="cmcsv" type="button">Download CSV</button></div>
+    <div class="tablewrap"><table id="cmtable"></table></div>
+  </section>
+
   <section id="panel-compare" hidden>
     <div class="controls">
       <label for="cmpadd">Add a neighbourhood (up to 4)
@@ -405,9 +481,10 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
   function showTip(e, html) { tip.innerHTML = html; tip.hidden = false; const w = tip.offsetWidth, h = tip.offsetHeight; let x = e.clientX + 14, y = e.clientY + 14; if (x + w > innerWidth - 8) x = e.clientX - w - 14; if (y + h > innerHeight - 8) y = e.clientY - h - 14; tip.style.left = x + "px"; tip.style.top = y + "px"; }
   function hideTip() { tip.hidden = true; }
 
-  let D, NB, PL;
+  let D, NB, PL, CM;
   try {
     [D, NB, PL] = await Promise.all(["data/growth.json", "data/neighbourhoods.geojson", "data/plans.geojson"].map(u => fetch(u).then(r => { if (!r.ok) throw new Error(u); return r.json(); })));
+    CM = await fetch("data/cmhc.json").then(r => r.ok ? r.json() : null).catch(() => null);
   } catch (err) {
     document.getElementById("asof").textContent = "Could not load the data files. If you opened this file directly, start a local server in the edmonton-growth folder (python3 -m http.server) and open http://localhost:8000.";
     return;
@@ -461,11 +538,12 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
   const tabs = [...document.querySelectorAll(".tab")];
   function setTab(t) {
     tabs.forEach(b => b.setAttribute("aria-selected", b.dataset.tab === t));
-    ["map", "plans", "pace", "rankings", "compare", "table"].forEach(k => document.getElementById("panel-" + k).hidden = k !== t);
+    ["map", "plans", "pace", "rankings", "cmhc", "compare", "table"].forEach(k => document.getElementById("panel-" + k).hidden = k !== t);
     try { localStorage.setItem("egm-tab", t); } catch (e) {}
     if (t === "compare") renderCompare();
     if (t === "pace") renderPace();
     if (t === "rankings") renderRankings();
+    if (t === "cmhc") renderCmhc();
   }
   tabs.forEach(b => b.addEventListener("click", () => setTab(b.dataset.tab)));
 
@@ -852,6 +930,155 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
     document.getElementById("paceexcluded").innerHTML = `<b>Not timed (${excl.length} plans):</b> ` + d3.groups(excl, p => p.pace_status).map(([s, ps]) => `${s}: ${ps.map(p => p.name).join(", ")}`).join(". ") + ".";
   }
 
+  // ---------- CMHC housing starts
+  // generic bar chart: cats = x labels; series = [{key, label, color, values:[number|null]}]; stacked or grouped
+  function barChart(el, cats, series, opts = {}) {
+    const W = opts.w || 640, H = opts.h || 240, m = { t: 10, r: 10, b: 24, l: 48 };
+    const grouped = !!opts.grouped;
+    const tot = cats.map((c, i) => grouped ? d3.max(series, s => s.values[i] || 0) : d3.sum(series, s => s.values[i] || 0));
+    const x = d3.scaleBand().domain(cats).range([m.l, W - m.r]).padding(cats.length > 60 ? 0.12 : 0.22);
+    const xi = grouped ? d3.scaleBand().domain(series.map(s => s.key)).range([0, x.bandwidth()]).padding(0.12) : null;
+    const y = d3.scaleLinear().domain([0, d3.max(tot) || 1]).nice(4).range([H - m.b, m.t]);
+    const s = d3.select(el).html("").append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("role", "img").attr("aria-label", opts.aria || "Bar chart");
+    s.append("g").attr("class", "grid").selectAll("line").data(y.ticks(4)).join("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", d => y(d)).attr("y2", d => y(d));
+    s.append("g").selectAll("text").data(y.ticks(4)).join("text").attr("x", m.l - 6).attr("y", d => y(d) + 4).attr("text-anchor", "end").text(opts.yf || d3.format("~s"));
+    const lab = opts.xlab || (c => c);
+    const shown = opts.xticks ? cats.filter(opts.xticks) : cats.filter((c, i) => i % Math.ceil(cats.length / (W / 44)) === 0 || i === cats.length - 1);
+    s.append("g").selectAll("text").data(shown).join("text").attr("x", c => x(c) + x.bandwidth() / 2).attr("y", H - 7).attr("text-anchor", "middle").text(lab);
+    const g = s.append("g");
+    cats.forEach((c, i) => {
+      const missing = series.every(sr => sr.values[i] == null);
+      if (missing) {
+        g.append("rect").attr("x", x(c)).attr("width", x.bandwidth()).attr("y", m.t).attr("height", H - m.b - m.t).attr("fill", css("--nodata")).attr("opacity", 0.6);
+      } else if (grouped) {
+        series.forEach(sr => { const v = sr.values[i] || 0, hh = y(0) - y(v); if (hh > 0) g.append("path").attr("fill", sr.color).attr("d", roundTop(x(c) + xi(sr.key), y(v), xi.bandwidth(), hh, Math.min(3, hh))); });
+      } else {
+        let acc = 0; const segs = series.map(sr => { const v = sr.values[i] || 0, s0 = acc; acc += v; return { sr, v, s0, s1: acc }; }).filter(d => d.v > 0);
+        segs.forEach((d, j) => {
+          const top = j === segs.length - 1, y1 = y(d.s1), hh = Math.max(0, y(d.s0) - y1 - (j > 0 && cats.length < 60 ? 2 : 0));
+          if (hh <= 0) return;
+          g.append("path").attr("fill", d.sr.color).attr("opacity", opts.partial && opts.partial(c) ? 0.6 : 1).attr("d", top ? roundTop(x(c), y1, x.bandwidth(), hh, Math.min(3, hh, x.bandwidth() / 2)) : `M${x(c)},${y1}h${x.bandwidth()}v${hh}h${-x.bandwidth()}Z`);
+        });
+      }
+      g.append("rect").attr("x", x(c) - 1).attr("width", x.bandwidth() + 2).attr("y", m.t).attr("height", H - m.b - m.t).attr("fill", "transparent")
+        .on("mousemove", e => showTip(e, `<b>${opts.tipTitle ? opts.tipTitle(c) : c}</b>` + (missing ? `<div class="note">${opts.missingText || "Not published"}</div>` :
+          series.map(sr => `<div class="r"><span><i class="sw" style="background:${sr.color}"></i>${sr.label}</span><span>${sr.values[i] == null ? "–" : fmt(sr.values[i])}</span></div>`).join("") + (grouped || series.length < 2 ? "" : `<div class="r"><span>Total</span><span>${fmt(tot[i])}</span></div>`))))
+        .on("mouseleave", hideTip);
+    });
+  }
+
+  const CM_TYPES = [["single", "Single detached", "--s1"], ["semi", "Semi-detached", "--s2"], ["row", "Row", "--s3"], ["apartment", "Apartment and other", "--s4"]];
+  const CM_MARKETS = [["Homeowner", "Homeowner", "--s1"], ["Rental", "Purpose-built rental", "--s3"], ["Condo", "Condominium", "--s4"], ["Co-Op", "Co-op", "--s5"]];
+  const MKLABEL = { All: "all markets", Rental: "purpose-built rental", Homeowner: "homeowner", Condo: "condominium", "Co-Op": "co-op" };
+  const SERLABEL = { starts: "Starts", completions: "Completions", under_construction: "Units under construction" };
+  const cmEls = ["cmgeo", "cmmarket", "cmseries", "cmfreq", "cmmixtype", "cmpermtype"].map(id => document.getElementById(id));
+  try { const s = JSON.parse(localStorage.getItem("egm-cmhc") || "null"); if (s) cmEls.forEach((el, i) => { if (s[i]) el.value = s[i]; }); } catch (e) {}
+  cmEls.forEach(el => el.addEventListener("change", () => { try { localStorage.setItem("egm-cmhc", JSON.stringify(cmEls.map(e => e.value))); } catch (e) {} renderCmhc(); }));
+
+  function cmSeries(geo, ser, mk, type) { return CM.data[geo][ser][mk][type]; }
+  // annual aggregation: flows sum over months (null if any month unpublished); stocks take the last month of the year
+  function cmAnnual(geo, ser, mk, type) {
+    const vals = cmSeries(geo, ser, mk, type), out = {};
+    CM.months.forEach((m, i) => { const y = m.slice(0, 4); (out[y] = out[y] || []).push(vals[i]); });
+    const stock = ser === "under_construction";
+    return Object.fromEntries(Object.entries(out).map(([y, v]) => [y, stock ? v[v.length - 1] : (v.some(x => x == null) ? null : d3.sum(v))]));
+  }
+  const lastYM = () => CM.last_month, lastY = () => +CM.last_month.slice(0, 4), lastMon = () => +CM.last_month.slice(5, 7);
+  const monName = mm => ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][mm - 1];
+  const yLabel = y => +y === lastY() && lastMon() < 12 ? `${y} (Jan–${monName(lastMon())})` : y;
+  function ytd(geo, ser, mk, type, year) {
+    const vals = cmSeries(geo, ser, mk, type);
+    const v = CM.months.map((m, i) => [m, vals[i]]).filter(([m]) => +m.slice(0, 4) === year && +m.slice(5, 7) <= lastMon()).map(d => d[1]);
+    return v.some(x => x == null) || !v.length ? null : d3.sum(v);
+  }
+
+  function renderCmhc() {
+    const panel = document.getElementById("panel-cmhc");
+    if (!CM) { panel.querySelector(".controls").insertAdjacentHTML("beforebegin", `<div class="callout">The CMHC data file couldn't be loaded. It is created by the weekly refresh (pipeline/build_cmhc.py).</div>`); return; }
+    const [geo, mk, ser, freq, mixType, permType] = cmEls.map(e => e.value);
+    const geoName = CM.geos[geo], years = [...new Set(CM.months.map(m => m.slice(0, 4)))];
+    const fullYears = years.filter(y => +y < lastY() || lastMon() === 12);
+    const LFY = fullYears[fullYears.length - 1];
+
+    // KPIs (starts)
+    const st = t => cmAnnual(geo, "starts", mk, t), stAll = cmAnnual(geo, "starts", "All", "all");
+    const cur = ytd(geo, "starts", mk, "all", lastY()), prev = ytd(geo, "starts", mk, "all", lastY() - 1);
+    const rentLFY = cmAnnual(geo, "starts", "Rental", "all")[LFY], rentAptLFY = cmAnnual(geo, "starts", "Rental", "apartment")[LFY];
+    document.getElementById("cmkpis").innerHTML = [
+      [fmt(st("all")[LFY]), `Starts in ${LFY}, ${MKLABEL[mk]}, ${geoName}`],
+      [cur != null ? fmt(cur) : "–", `Starts Jan–${monName(lastMon())} ${lastY()}${prev ? ` (${d3.format("+.0%")(cur / prev - 1)} on ${lastY() - 1})` : ""}`],
+      [d3.format(".0%")(rentLFY / stAll[LFY]), `Purpose-built rental share of all starts, ${LFY}`],
+      [fmt(rentAptLFY), `Purpose-built rental apartment starts, ${LFY}`],
+    ].map(([v, l]) => `<div class="kpi"><small>${l}</small><b>${v}</b></div>`).join("");
+
+    // main chart: measure by dwelling type
+    const mainSeries = CM_TYPES.map(([t, l, c]) => ({ key: t, label: l, color: css(c), values: null }));
+    let cats, tipTitle, xlab, xticks;
+    if (freq === "year") {
+      cats = years;
+      mainSeries.forEach(s => { const a = cmAnnual(geo, ser, mk, s.key); s.values = cats.map(y => a[y]); });
+      tipTitle = c => yLabel(c) + (ser === "under_construction" ? (+c === lastY() ? `, ${monName(lastMon())}` : ", December") : "");
+      xlab = c => "'" + c.slice(2) + (+c === lastY() && lastMon() < 12 ? "*" : "");
+    } else {
+      cats = CM.months;
+      mainSeries.forEach(s => { s.values = cmSeries(geo, ser, mk, s.key); });
+      tipTitle = c => `${monName(+c.slice(5, 7))} ${c.slice(0, 4)}`;
+      xticks = c => c.endsWith("-01"); xlab = c => "'" + c.slice(2, 4);
+    }
+    barChart(document.getElementById("cmmain"), cats, mainSeries, { w: 1200, h: 280, tipTitle, xlab, xticks, partial: c => freq === "year" && +c === lastY() && lastMon() < 12, missingText: "CMHC has not published this period for this area", aria: `${SERLABEL[ser]} by dwelling type` });
+    document.getElementById("cmmaintitle").textContent = `${SERLABEL[ser]} by dwelling type: ${MKLABEL[mk]}, ${geoName}`;
+    const gaps = ser !== "starts" ? years.filter(y => mainSeries.every(s => { const a = cmAnnual(geo, ser, mk, s.key); return a[y] == null; })) : [];
+    document.getElementById("cmmainnote").textContent = (ser === "under_construction" ? "Units under construction at the end of each year (or the latest month). " : "") +
+      (freq === "year" && lastMon() < 12 ? `${lastY()} runs January to ${monName(lastMon())}. ` : "") +
+      (ser !== "starts" ? "Grey bars: CMHC has not published completions and units under construction for Edmonton from January 2023 to June 2025." : "");
+    document.getElementById("cmmainkey").innerHTML = CM_TYPES.map(([, l, c]) => `<span><i class="sw" style="background:var(${c})"></i>${l}</span>`).join("");
+
+    // intended market mix (starts, annual)
+    barChart(document.getElementById("cmmix"), years, CM_MARKETS.map(([k, l, c]) => { const a = cmAnnual(geo, "starts", k, mixType); return { key: k, label: l, color: css(c), values: years.map(y => a[y]) }; }),
+      { w: 620, h: 250, tipTitle: yLabel, xlab: c => "'" + c.slice(2), partial: c => +c === lastY() && lastMon() < 12, aria: "Starts by intended market" });
+    document.getElementById("cmmixkey").innerHTML = CM_MARKETS.map(([, l, c]) => `<span><i class="sw" style="background:var(${c})"></i>${l}</span>`).join("");
+
+    // rental share
+    const rA = cmAnnual(geo, "starts", "Rental", mixType), aA = cmAnnual(geo, "starts", "All", mixType);
+    lineChart(document.getElementById("cmrentshare"), [{ name: `Rental share, ${geoName}`, color: css("--s3"), pts: years.map(y => ({ x: y, v: aA[y] ? rA[y] / aA[y] : null })) }],
+      { w: 620, h: 220, zero: true, yf: d3.format(".0%"), tf: d3.format(".1%"), aria: "Purpose-built rental share of starts" });
+
+    // permits vs starts (city only)
+    const pYears = years.filter(y => +y >= 2009 && +y <= CY);
+    const permits = pYears.map(y => d3.sum(nbs, n => { const p = n.permits[y]; if (!p) return 0; return permType === "all" ? p.units : permType === "apartment" ? p.apartment + p.suite + p.backyard + p.other : p[permType]; }));
+    const sA = cmAnnual("city", "starts", "All", permType);
+    barChart(document.getElementById("cmperm"), pYears, [
+      { key: "permits", label: "Units on building permits issued", color: css("--s-other"), values: permits },
+      { key: "starts", label: "CMHC starts", color: css("--s1"), values: pYears.map(y => +y > lastY() ? null : sA[y]) }],
+      { w: 620, h: 250, grouped: true, tipTitle: c => yLabel(c) + (+c === CY ? " (permits to date)" : ""), xlab: c => "'" + c.slice(2), aria: "Building permits and CMHC starts" });
+    document.getElementById("cmpermkey").innerHTML = `<span><i class="sw" style="background:var(--s-other)"></i>Units on building permits issued</span><span><i class="sw" style="background:var(--s1)"></i>CMHC starts</span>`;
+
+    // city share of region
+    const cA = cmAnnual("city", "starts", mk, "all"), rgA = cmAnnual("cma", "starts", mk, "all");
+    lineChart(document.getElementById("cmshare"), [{ name: `City share of ${MKLABEL[mk]} starts`, color: css("--s4"), pts: years.map(y => ({ x: y, v: rgA[y] ? cA[y] / rgA[y] : null })) }],
+      { w: 620, h: 220, yf: d3.format(".0%"), tf: d3.format(".1%"), aria: "City share of regional starts" });
+
+    // table
+    const tabCols = [...CM_TYPES.map(([t, l]) => ["t", t, l]), ["t", "all", "All types"], ...CM_MARKETS.map(([k, l]) => ["m", k, l])];
+    const cell = (c, y) => c[0] === "t" ? cmAnnual(geo, ser, mk, c[1])[y] : cmAnnual(geo, ser, c[1], "all")[y];
+    cmTableRows = years.slice().reverse().map(y => [yLabel(y), ...tabCols.map(c => cell(c, y))]);
+    document.getElementById("cmtabletitle").textContent = `${SERLABEL[ser]}, ${geoName}`;
+    document.getElementById("cmtablenote").textContent = `By dwelling type for ${MKLABEL[mk]}, and by intended market for all dwelling types. ${ser === "under_construction" ? "Units under construction at year end. " : ""}"–" means CMHC has not published the figure. Source: CMHC Starts and Completions Survey, retrieved ${CM.generated.slice(0, 10)}.`;
+    cmTableHead = ["Year", ...tabCols.map(c => c[2])];
+    document.getElementById("cmtable").innerHTML = `<thead><tr><th>Year</th>${CM_TYPES.map(([, l]) => `<th class="n">${l}</th>`).join("")}<th class="n">All types</th>${CM_MARKETS.map(([, l]) => `<th class="n">${l}</th>`).join("")}</tr></thead><tbody>` +
+      cmTableRows.map(r => `<tr style="cursor:default"><td class="mono">${r[0]}</td>${r.slice(1).map((v, i) => `<td class="n"${i === 4 ? ' style="font-weight:600"' : ""}>${v == null ? "–" : fmt(v)}</td>`).join("")}</tr>`).join("") + "</tbody>";
+  }
+  let cmTableRows = [], cmTableHead = [];
+  document.getElementById("cmcsv").addEventListener("click", () => {
+    const q = s => `"${String(s).replace(/"/g, '""')}"`;
+    const lines = [cmTableHead.map(q).join(",")].concat(cmTableRows.map(r => [q(r[0]), ...r.slice(1).map(v => v == null ? "" : v)].join(",")));
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `cmhc-${cmEls[2].value}-${cmEls[0].value}-${cmEls[1].value.toLowerCase()}.csv`;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  });
+
   // ---------- rankings
   const RK_TYPES = [["units", "All housing types"], ["single", "Single detached"], ["semi", "Semi-detached"], ["row", "Row house"], ["apartment", "Apartment & mixed use"], ["suite", "Secondary suites"], ["backyard", "Garden & garage suites"]];
   const rkType = document.getElementById("rktype"), rkYear = document.getElementById("rkyear"), rkSet = document.getElementById("rkset"), rkTop = document.getElementById("rktop");
@@ -1027,6 +1254,7 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
     `<b>Redevelopment plans</b> state targets in different ways, so each is measured on its own terms. "New units" targets count net units permitted inside the plan boundary since the plan's adoption. Population targets use the 2021 census; where a plan covers only part of a neighbourhood (The Quarters is about half of Boyle Street), residents are estimated by area share. The City Centre ARP target (Blatchford) is derived from its district density objectives, since it has no statistics table.`,
     `<b>Build-out pace</b>: approval dates come from the bylaw history at the front of each plan's office consolidation. The first home permit is the first permit that starts a run of new-home permits (at least 5 within a year and 400 m, or one building of 20+ units), so isolated houses on old acreages don't count; two plans (Horse Hill ASP, Marquis NSP) use a hand-checked date. A plan is only timed when its whole build-out is inside the permit data, which starts in 2009. Benchmarks use greenfield plans with at least 1,000 planned units. Allard, Graydon Hill and Cashman NASPs were repealed in October 2024 and use their neighbourhood boundaries. Housing types split secondary and garden suites out of house permits using the permit description; a second new-house permit at the same address is treated as a re-issue.`,
     `<b>Unit counting</b>: each permit's added units are split by housing type, moving secondary and garden suites out of house permits using the permit description. Units are left out where the permit data double counts or the description shows no new home: ${Object.entries(D.unit_exclusions || {}).map(([k, v]) => `${k} (${fmt(v)} units)`).join("; ")}. The full rules are in the project README.`,
+    `<b>Housing starts (CMHC tab)</b>: CMHC Starts and Completions Survey, retrieved weekly from CMHC's Housing Market Information Portal for the City of Edmonton (census subdivision) and the Edmonton CMA, by dwelling type and intended market. Definitions follow <a href="https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodologies-starts-completions-market-absorption-survey" target="_blank" rel="noopener">CMHC's survey methodology</a>. Used under the CMHC Licence Agreement for the Use of Data.`,
     `<b>Mix vs plan</b> compares the plan's low-density (single/semi-detached) share of units with the share of units actually permitted in the plan area since 2015. More than 10 points below plan is flagged "denser than plan"; more than 10 points above, "less dense than plan".`,
     `<b>Classification</b> (Developing / Redeveloping / Industrial) comes from the City's neighbourhood classification on development permits. Redeveloping covers mature and established neighbourhoods.`,
   ].map(t => `<li>${t}</li>`).join("");
@@ -1034,7 +1262,7 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
   // ---------- initial state
   let m0 = 0, nb0 = null, t0 = "map";
   try { m0 = +(localStorage.getItem("egm-metric") || 0); nb0 = localStorage.getItem("egm-nb"); t0 = localStorage.getItem("egm-tab") || "map"; } catch (e) {}
-  const h = location.hash.slice(1); if (["map", "plans", "pace", "rankings", "compare", "table"].includes(h)) t0 = h;
+  const h = location.hash.slice(1); if (["map", "plans", "pace", "rankings", "cmhc", "compare", "table"].includes(h)) t0 = h;
   msel.value = String(m0 < METRICS.length ? m0 : 0);
   paint();
   select(nb0 && byId.has(nb0) ? nb0 : nameToId.get("the orchards at ellerslie") || nbs[0].id);

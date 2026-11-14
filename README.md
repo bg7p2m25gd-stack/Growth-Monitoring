@@ -13,6 +13,8 @@ buildout targets in approved statutory plans (NSPs / NASPs).
   in its consolidation by `pipeline/extract_plan_dates.py`. Entries marked `verified` were checked by hand.
 - `pipeline/first_permit_overrides.json` — hand-checked first-permit dates where the automatic rule is
   fooled by houses on old acreages (currently Horse Hill ASP and Marquis NSP).
+- `pipeline/build_cmhc.py` — fetches CMHC housing starts, completions and units under construction (City of
+  Edmonton and Edmonton CMA, monthly from 2009, by dwelling type and intended market) into `data/cmhc.json`.
 - `pipeline/extract_plan_text.py`, `pipeline/render_pages.py` — helpers for reading plan PDFs.
 - `refresh.sh` — re-pulls all data.
 
@@ -53,6 +55,16 @@ Checked against the Blatchford pace workbook (11 neighbourhoods, within about 1%
 census for 27 greenfield neighbourhoods: singles, semis and apartments match within 0–15% once a year of
 construction lag is allowed; row houses run about 30% above the census (classification and occupancy,
 not suites); suites cannot be checked against the census because many are not finished or occupied.
+
+## CMHC housing starts vs building permits
+The "Housing starts (CMHC)" tab uses CMHC's Starts and Completions Survey, retrieved weekly from the Housing
+Market Information Portal (used under the CMHC Licence Agreement for the Use of Data). A **start** is counted
+when construction begins (usually when the whole footing is poured), by CMHC site visits; a **building permit**
+is the City's approval to build, counted when issued. Starts exclude renovations and conversions within existing
+buildings (so suites added to existing homes and office conversions are not starts), classify stacked
+townhouses, duplexes and triplexes as "apartment and other", and record the intended market (homeowner,
+rental, condo, co-op). "Rental" = purpose-built rental. CMHC has not published Edmonton completions or units
+under construction for January 2023 to June 2025; those months are shown as gaps.
 
 ## Data sources (data.edmonton.ca)
 General Building Permits (24uj-dj8v), Development Permits (2ccn-pwtu), Property Assessment current
