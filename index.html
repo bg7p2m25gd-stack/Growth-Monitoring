@@ -414,9 +414,6 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
         <div class="controls" style="margin:8px 0 4px"><label for="cmmixtype">Dwelling type <select id="cmmixtype"><option value="all">All types</option><option value="single">Single detached</option><option value="semi">Semi-detached</option><option value="row">Row</option><option value="apartment">Apartment and other</option></select></label></div>
         <div class="serieskey" id="cmmixkey"></div><div id="cmmix"></div></div>
       <div class="card chart"><h3>Purpose-built rental share of starts</h3><div class="note">Rental starts as a share of all starts, for the selected area and dwelling type.</div><div id="cmrentshare" style="margin-top:46px"></div></div>
-      <div class="card chart"><h3>Building permits and starts, City of Edmonton</h3><div class="note">Units on building permits issued against CMHC starts each year. Expect gaps from timing and definitions (see above). Permits for "Apartment and other" include suites and conversions, which CMHC counts differently or not at all.</div>
-        <div class="controls" id="cmpermctl" style="margin:8px 0 4px"><label for="cmpermtype">Dwelling type <select id="cmpermtype"><option value="all">All types</option><option value="single">Single detached</option><option value="semi">Semi-detached</option><option value="row">Row</option><option value="apartment">Apartment and other</option></select></label></div>
-        <div class="serieskey" id="cmpermkey"></div><div id="cmperm"></div></div>
       <div class="card chart"><h3>Starts by municipality</h3><div class="note" id="cmmunnote"></div>
         <div class="controls" style="margin:8px 0 4px"><label for="cmmuntype">Dwelling type <select id="cmmuntype"><option value="all">All types</option><option value="single">Single detached</option><option value="semi">Semi-detached</option><option value="row">Row</option><option value="apartment">Apartment and other</option></select></label></div>
         <div class="serieskey" id="cmmunkey"></div><div id="cmmun"></div></div>
@@ -1009,7 +1006,7 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
   const CM_MARKETS = [["Homeowner", "Homeowner", "--s1"], ["Rental", "Purpose-built rental", "--s3"], ["Condo", "Condominium", "--s4"], ["Co-Op", "Co-op", "--s5"]];
   const MKLABEL = { All: "all markets", Rental: "purpose-built rental", Homeowner: "homeowner", Condo: "condominium", "Co-Op": "co-op" };
   const SERLABEL = { starts: "Starts", completions: "Completions", under_construction: "Units under construction" };
-  const cmEls = ["cmgeo", "cmmarket", "cmseries", "cmfreq", "cmmixtype", "cmpermtype", "cmmuntype"].map(id => document.getElementById(id));
+  const cmEls = ["cmgeo", "cmmarket", "cmseries", "cmfreq", "cmmixtype", "cmmuntype"].map(id => document.getElementById(id));
   if (CM) {
     const order = ["cma", "city", ...CM.municipalities.filter(k => k !== "city" && k !== "other"), "other"];
     cmEls[0].innerHTML = order.filter(k => CM.geos[k]).map(k => `<option value="${k}">${CM.geos[k]}</option>`).join("");
@@ -1039,7 +1036,7 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
   function renderCmhc() {
     const panel = document.getElementById("panel-cmhc");
     if (!CM) { panel.querySelector(".controls").insertAdjacentHTML("beforebegin", `<div class="callout">The CMHC data file couldn't be loaded. It is created by the weekly refresh (pipeline/build_cmhc.py).</div>`); return; }
-    const [geo, mk, ser, freq, mixType, permType, munType] = cmEls.map(e => e.value);
+    const [geo, mk, ser, freq, mixType, munType] = cmEls.map(e => e.value);
     const geoName = CM.geos[geo], years = [...new Set(CM.months.map(m => m.slice(0, 4)))];
     const fullYears = years.filter(y => +y < lastY() || lastMon() === 12);
     const LFY = fullYears[fullYears.length - 1];
@@ -1090,23 +1087,6 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
     const rA = cmAnnual(geo, "starts", "Rental", mixType), aA = cmAnnual(geo, "starts", "All", mixType);
     lineChart(document.getElementById("cmrentshare"), [{ name: `Rental share, ${geoName}`, color: css("--s3"), pts: years.map(y => ({ x: y, v: aA[y] && rA[y] != null ? rA[y] / aA[y] : null })) }],
       { w: 620, h: 220, zero: true, yf: d3.format(".0%"), tf: d3.format(".1%"), aria: "Purpose-built rental share of starts" });
-
-    // permits vs starts (City of Edmonton only; permits exist for the city alone)
-    const permOn = geo === "city";
-    document.getElementById("cmpermctl").hidden = !permOn;
-    if (!permOn) {
-      document.getElementById("cmpermkey").innerHTML = "";
-      document.getElementById("cmperm").innerHTML = `<div class="note">Building permits are available for the City of Edmonton only. Choose City of Edmonton in the Area selector to see them against CMHC starts.</div>`;
-    } else {
-      const pYears = years.filter(y => +y >= 2009 && +y <= CY);
-      const permits = pYears.map(y => d3.sum(nbs, n => { const p = n.permits[y]; if (!p) return 0; return permType === "all" ? p.units : permType === "apartment" ? p.apartment + p.suite + p.backyard + p.other : p[permType]; }));
-      const sA = cmAnnual("city", "starts", "All", permType);
-      barChart(document.getElementById("cmperm"), pYears, [
-        { key: "permits", label: "Units on building permits issued", color: css("--s-other"), values: permits },
-        { key: "starts", label: "CMHC starts", color: css("--s1"), values: pYears.map(y => +y > lastY() ? null : sA[y]) }],
-        { w: 620, h: 250, grouped: true, tipTitle: c => yLabel(c) + (+c === CY ? " (permits to date)" : ""), xlab: c => "'" + c.slice(2), aria: "Building permits and CMHC starts" });
-      document.getElementById("cmpermkey").innerHTML = `<span><i class="sw" style="background:var(--s-other)"></i>Units on building permits issued</span><span><i class="sw" style="background:var(--s1)"></i>CMHC starts</span>`;
-    }
 
     // starts by municipality (whole region, whatever the Area selector says)
     const ranked = CM.municipalities.filter(k => k !== "city" && k !== "other");
