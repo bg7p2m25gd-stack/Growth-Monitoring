@@ -33,6 +33,10 @@ jobs:
       - name: Pull City of Edmonton open data and rebuild
         run: python -W ignore pipeline/build_data.py
 
+      - name: Pull assessment roll for density and tax base
+        # needs growth.json from the step above; if the City's assessment data is unavailable, keep last week's file
+        run: python -W ignore pipeline/build_parcels.py || echo "::warning::Assessment fetch failed; kept the previous data/parcels.json"
+
       - name: Pull CMHC housing starts
         # CMHC outages shouldn't block the City data refresh: keep last week's file and flag it
         run: python -W ignore pipeline/build_cmhc.py || echo "::warning::CMHC fetch failed; kept the previous data/cmhc.json"

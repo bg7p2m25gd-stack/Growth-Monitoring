@@ -210,6 +210,13 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
 .faq summary { cursor: pointer; font: 600 17px var(--f-display); }
 .faq details p { margin: 8px 0 2px; color: var(--ink-2); max-width: 90ch; }
 .faqlink { margin-top: 28px; font-size: 14px; }
+.hlrow td { background: var(--rule-2); font-weight: 700; box-shadow: inset 0 1px 0 var(--accent), inset 0 -1px 0 var(--accent); }
+.stackbar { display: flex; height: 30px; gap: 2px; margin: 8px 0 12px; }
+.stackbar i { display: block; height: 100%; min-width: 2px; }
+.landkey { display: grid; gap: 4px; font-size: 13px; color: var(--ink-2); }
+.landkey div { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto auto; gap: 8px; align-items: baseline; }
+.landkey .num { font-size: 12px; color: var(--ink-3); text-align: right; }
+.landkey .sw { margin: 0; }
 
 #tip { position: fixed; pointer-events: none; background: var(--panel); color: var(--ink); border: 1px solid var(--rule); box-shadow: 0 4px 16px rgb(0 0 0 / 0.14); padding: 8px 10px; font-size: 12.5px; border-radius: 4px; z-index: 10; max-width: 280px; }
 #tip b { font-family: var(--f-display); font-size: 15px; font-weight: 600; }
@@ -233,6 +240,8 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
     <button class="tab" role="tab" id="tab-plans" aria-selected="false" data-tab="plans">Plan buildout</button>
     <button class="tab" role="tab" id="tab-pace" aria-selected="false" data-tab="pace">Build-out pace</button>
     <button class="tab" role="tab" id="tab-rankings" aria-selected="false" data-tab="rankings">Rankings</button>
+    <button class="tab" role="tab" id="tab-density" aria-selected="false" data-tab="density">Density</button>
+    <button class="tab" role="tab" id="tab-taxbase" aria-selected="false" data-tab="taxbase">Tax base</button>
     <button class="tab" role="tab" id="tab-cmhc" aria-selected="false" data-tab="cmhc">Housing starts (CMHC)</button>
     <button class="tab" role="tab" id="tab-compare" aria-selected="false" data-tab="compare">Compare</button>
     <button class="tab" role="tab" id="tab-table" aria-selected="false" data-tab="table">All neighbourhoods</button>
@@ -373,6 +382,102 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
     <div class="tablewrap"><table id="contribtable"></table></div>
   </section>
 
+  <section id="panel-density" hidden>
+    <div class="callout" id="dnmissing" hidden>Data not available. The density and tax figures could not be loaded, so this tab is empty.</div>
+    <div id="dnbody">
+      <div class="explain">
+        <h2>Built density vs gross density</h2>
+        <p class="bottom" style="margin-top:0">Gross density divides homes by a neighbourhood's whole area, so a neighbourhood that has just started building looks sparse no matter how dense its buildings are. Built density divides homes by only the land that has finished housing on it, so neighbourhoods at different stages can be compared fairly. <a href="#faq" data-goto="faq">How these are worked out</a>.</p>
+      </div>
+      <div class="controls">
+        <label for="dncls">Neighbourhoods
+          <select id="dncls">
+            <option value="dr">Developing and redeveloping</option>
+            <option value="Developing">Developing</option>
+            <option value="Redeveloping">Redeveloping</option>
+            <option value="all">All, including industrial</option>
+          </select>
+        </label>
+        <label for="dnnb">Highlight a neighbourhood
+          <input type="search" id="dnnb" list="nblist" placeholder="Type a name">
+        </label>
+      </div>
+      <div class="callout" id="dnmsg" hidden></div>
+      <div class="kpis" id="dnkpis"></div>
+      <div class="card chart">
+        <h3>Progress vs built density</h3>
+        <div class="note">Neighbourhoods with an approved plan. Top left = dense but early. Click a dot to highlight it.</div>
+        <div id="dnscatter"></div>
+      </div>
+      <div class="cmpgrid" style="margin-top:20px">
+        <div class="card chart">
+          <h3>Built density vs gross density</h3>
+          <div class="note">Homes per hectare, for the highlighted neighbourhood and five others for reference.</div>
+          <div class="serieskey"><span><i class="sw" style="background:var(--s1)"></i>Built density</span><span><i class="sw" style="background:var(--s-other)"></i>Gross density</span></div>
+          <div id="dnbars"></div>
+        </div>
+        <div class="card chart">
+          <h3>Land composition</h3>
+          <div class="note" id="dnlandnote"></div>
+          <div id="dnland"></div>
+        </div>
+      </div>
+      <div class="tablehead"><div><h2>Same-stage comparison</h2><div class="note">Homes permitted per hectare of residential land, counted 5, 10 and 15 years after each neighbourhood's first home permit. Only neighbourhoods that started building in 2010 or later.</div></div></div>
+      <div class="tablewrap"><table id="dnstage"></table></div>
+      <div class="tablehead"><div><h2>Ranking by built density</h2><div class="note">Neighbourhoods in the selected group. Rank is among all neighbourhoods with figures. Click a row to highlight it.</div></div><button class="btn" id="dncsv" type="button">Download CSV</button></div>
+      <div class="tablewrap" style="max-height:70vh"><table id="dnrank"></table></div>
+    </div>
+  </section>
+
+  <section id="panel-taxbase" hidden>
+    <div class="callout" id="txmissing" hidden>Data not available. The density and tax figures could not be loaded, so this tab is empty.</div>
+    <div id="txbody">
+      <div class="explain">
+        <h2>What land produces in municipal tax</h2>
+        <p class="bottom" style="margin-top:0">Municipal property tax is estimated as each property's assessed value times the City's municipal tax rate for its class. Education tax is left out. It is shown per hectare of land with finished housing, and per home. This shows what land produces in tax, not what it costs the City to serve; servicing costs are not published by neighbourhood. <a href="#faq" data-goto="faq">How this is worked out</a>.</p>
+      </div>
+      <div class="controls">
+        <label for="txcls">Neighbourhoods
+          <select id="txcls">
+            <option value="dr">Developing and redeveloping</option>
+            <option value="Developing">Developing</option>
+            <option value="Redeveloping">Redeveloping</option>
+            <option value="all">All, including industrial</option>
+          </select>
+        </label>
+        <label for="txnb">Highlight a neighbourhood
+          <input type="search" id="txnb" list="nblist" placeholder="Type a name">
+        </label>
+      </div>
+      <div class="callout" id="txmsg" hidden></div>
+      <div class="kpis" id="txkpis"></div>
+      <div class="cmpgrid">
+        <div class="card chart">
+          <h3>Residential municipal tax per hectare</h3>
+          <div class="note">Per hectare of residential land with finished buildings. The highlighted neighbourhood is marked in coral.</div>
+          <div class="serieskey"><span><i class="sw" style="background:var(--s1)"></i>Homes</span><span><i class="sw" style="background:var(--s2)"></i>Rental buildings</span><span><i class="sw" style="background:var(--s-other)"></i>Citywide median</span></div>
+          <div id="txha"></div>
+        </div>
+        <div class="card chart">
+          <h3>Municipal tax per home</h3>
+          <div class="note">Homes in denser areas are usually smaller and assessed lower, so they pay less each, while the land as a whole produces more.</div>
+          <div id="txhome"></div>
+        </div>
+      </div>
+      <div class="cmpgrid" style="margin-top:20px">
+        <div class="card chart">
+          <h3>Typical values over time</h3>
+          <div class="note">Median assessed value of a house on its own lot and of a condo unit, by roll year. Values are assessed market values as of July 1 of the year before each roll. Years with fewer than 10 properties are left out.</div>
+          <div class="serieskey"><span><i class="sw" style="background:var(--s1)"></i>House</span><span><i class="sw" style="background:var(--s2)"></i>Condo unit</span></div>
+          <div id="txvalues"></div>
+        </div>
+        <div class="card" id="txnonres"></div>
+      </div>
+      <div class="tablehead"><div><h2>Ranking by residential tax per hectare</h2><div class="note">Neighbourhoods in the selected group. Rank is among all neighbourhoods with figures. Click a row to highlight it.</div></div><button class="btn" id="txcsv" type="button">Download CSV</button></div>
+      <div class="tablewrap" style="max-height:70vh"><table id="txrank"></table></div>
+    </div>
+  </section>
+
   <section id="panel-cmhc" hidden>
     <div class="explain">
       <h2>Starts are not permits</h2>
@@ -493,6 +598,32 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
       <p>CMHC records the intended market of every start: homeowner, rental, condo or co-op. "Rental" means the home was built to be rented, regardless of who finances it. A condo unit that an owner later rents out is still counted as condo. Building permits don't record tenure, so purpose-built rental figures are only on the Housing starts tab.</p>
     </details>
 
+    <h3>Density and tax base</h3>
+    <details>
+      <summary>What is the difference between built density and gross density?</summary>
+      <p>Gross density is homes divided by the whole area of a neighbourhood, including roads, parks, schools and land not yet built on. Built density is homes divided by only the residential land that has finished buildings on it. A new neighbourhood that is half built looks sparse on gross density even if its buildings are dense; built density lets it be compared with a mature neighbourhood.</p>
+    </details>
+    <details>
+      <summary>How are homes counted for density?</summary>
+      <p>Homes in finished buildings: 2021 census dwellings plus homes on later building permits, leaving out permits from the last three years that have no occupancy date yet.</p>
+    </details>
+    <details>
+      <summary>Which land counts as residential?</summary>
+      <p>Lot sizes come from the City's property assessment roll. Condo units each carry their share of the parcel, so they add up correctly. Land with no finished building is left out, and large unsubdivided parcels (over 2 hectares with no registered plan) are kept separate. Roads, parks and schools are not on the roll.</p>
+    </details>
+    <details>
+      <summary>How is municipal tax estimated?</summary>
+      <p id="faq-tax-p">Each property's assessed value times the City's municipal tax rate for its class. Education tax is left out. These are estimates, not actual tax bills.</p>
+    </details>
+    <details>
+      <summary>Why isn't non-residential tax shown?</summary>
+      <p>The City's open data includes tax-exempt properties such as post-secondary campuses, hospitals and City-owned land without marking them, so tax can't be estimated reliably for non-residential property. The Tax base tab shows assessed value per hectare instead, which is not tax.</p>
+    </details>
+    <details>
+      <summary>What are "typical" house and condo values?</summary>
+      <p>Medians of assessed value for the roll year. A house is a residential account on its own lot, with a finished building. A condo is a condo unit worth at least $75,000, which leaves out parking stalls and storage units. A value is shown only where there are at least 10 properties.</p>
+    </details>
+
     <h3>Sources and method</h3>
     <div id="method"></div>
 
@@ -516,10 +647,11 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
   function showTip(e, html) { tip.innerHTML = html; tip.hidden = false; const w = tip.offsetWidth, h = tip.offsetHeight; let x = e.clientX + 14, y = e.clientY + 14; if (x + w > innerWidth - 8) x = e.clientX - w - 14; if (y + h > innerHeight - 8) y = e.clientY - h - 14; tip.style.left = x + "px"; tip.style.top = y + "px"; }
   function hideTip() { tip.hidden = true; }
 
-  let D, NB, PL, CM;
+  let D, NB, PL, CM, PA;
   try {
     [D, NB, PL] = await Promise.all(["data/growth.json", "data/neighbourhoods.geojson", "data/plans.geojson"].map(u => fetch(u).then(r => { if (!r.ok) throw new Error(u); return r.json(); })));
     CM = await fetch("data/cmhc.json").then(r => r.ok ? r.json() : null).catch(() => null);
+    PA = await fetch("data/parcels.json").then(r => r.ok ? r.json() : null).catch(() => null);
   } catch (err) {
     document.getElementById("asof").textContent = "Could not load the data files. If you opened this file directly, start a local server in the edmonton-growth folder (python3 -m http.server) and open http://localhost:8000.";
     return;
@@ -573,12 +705,14 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
   const tabs = [...document.querySelectorAll(".tab")];
   function setTab(t) {
     tabs.forEach(b => b.setAttribute("aria-selected", b.dataset.tab === t));
-    ["map", "plans", "pace", "rankings", "cmhc", "compare", "table", "faq"].forEach(k => document.getElementById("panel-" + k).hidden = k !== t);
+    ["map", "plans", "pace", "rankings", "density", "taxbase", "cmhc", "compare", "table", "faq"].forEach(k => document.getElementById("panel-" + k).hidden = k !== t);
     try { localStorage.setItem("egm-tab", t); } catch (e) {}
     if (t === "compare") renderCompare();
     if (t === "pace") renderPace();
     if (t === "rankings") renderRankings();
     if (t === "cmhc") renderCmhc();
+    if (t === "density") renderDensity();
+    if (t === "taxbase") renderTax();
   }
   tabs.forEach(b => b.addEventListener("click", () => setTab(b.dataset.tab)));
 
@@ -997,7 +1131,7 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
       }
       g.append("rect").attr("x", x(c) - 1).attr("width", x.bandwidth() + 2).attr("y", m.t).attr("height", H - m.b - m.t).attr("fill", "transparent")
         .on("mousemove", e => showTip(e, `<b>${opts.tipTitle ? opts.tipTitle(c) : c}</b>` + (missing ? `<div class="note">${opts.missingText || "Not published"}</div>` :
-          series.map(sr => `<div class="r"><span><i class="sw" style="background:${sr.color}"></i>${sr.label}</span><span>${sr.values[i] == null ? "–" : fmt(sr.values[i])}</span></div>`).join("") + (grouped || series.length < 2 ? "" : `<div class="r"><span>Total</span><span>${fmt(tot[i])}</span></div>`))))
+          series.map(sr => `<div class="r"><span><i class="sw" style="background:${sr.color}"></i>${sr.label}</span><span>${sr.values[i] == null ? "–" : (opts.tf || fmt)(sr.values[i])}</span></div>`).join("") + (grouped || series.length < 2 ? "" : `<div class="r"><span>Total</span><span>${fmt(tot[i])}</span></div>`))))
         .on("mouseleave", hideTip);
     });
   }
@@ -1329,6 +1463,223 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
   document.getElementById("tcls").addEventListener("change", renderTable);
   renderTable();
 
+  // ---------- density and tax base (data/parcels.json)
+  const PR = PA ? PA.neighbourhoods : null;
+  const pr = id => (PR && PR[id]) || null;
+  const paOk = n => { const p = pr(n.id); return !!(p && p.built_density != null && p.built_density > 0); };
+  const paTaxOk = n => { const p = pr(n.id); return !!(p && p.res_tax_per_ha != null && p.land); };
+  const PALL = PR ? nbs.filter(paOk) : [], TALL = PR ? nbs.filter(paTaxOk) : [];
+  const bdOf = n => pr(n.id).built_density, tphaOf = n => pr(n.id).res_tax_per_ha, tphomeOf = n => pr(n.id).tax_per_home;
+  const rankMap = (arr, f) => new Map(arr.slice().sort((a, b) => f(b) - f(a)).map((n, i) => [n.id, i + 1]));
+  const rkD = rankMap(PALL, bdOf), rkT = rankMap(TALL, tphaOf);
+  const medBD = d3.median(PALL, bdOf), medTPH = d3.median(TALL, tphaOf), medTHome = d3.median(TALL, tphomeOf);
+  const medNR = d3.median(nbs.filter(n => pr(n.id) && pr(n.id).nonres_value_per_ha != null), n => pr(n.id).nonres_value_per_ha);
+  const ord = k => k + (["th", "st", "nd", "rd"][(k % 100 > 10 && k % 100 < 14) ? 0 : (k % 10 < 4 ? k % 10 : 0)]);
+  const shortName = s => s.length > 18 ? s.slice(0, 17) + "…" : s;
+  const money0 = v => v == null ? "n/a" : "$" + fmt(v);
+  const DN_REFS = ["Wîhkwêntôwin", "Westmount", "Griesbach", "Summerside", "Glenridding Heights"].map(s => nameToId.get(s.toLowerCase())).filter(Boolean);
+  const CLS_OPTS = ["dr", "Developing", "Redeveloping", "all"];
+  let hlId = nameToId.get("blatchford area") || nbs[0].id, dnCls = "dr", txCls = "dr";
+  try { const s = JSON.parse(localStorage.getItem("egm-dens") || "null"); if (s) { if (byId.has(s[0])) hlId = s[0]; if (CLS_OPTS.includes(s[1])) dnCls = s[1]; if (CLS_OPTS.includes(s[2])) txCls = s[2]; } } catch (e) {}
+  const clsOk = (n, c) => c === "all" || (c === "dr" ? (n.cls === "Developing" || n.cls === "Redeveloping") : n.cls === c);
+  const dnEls = { cls: document.getElementById("dncls"), nb: document.getElementById("dnnb") }, txEls = { cls: document.getElementById("txcls"), nb: document.getElementById("txnb") };
+  function paSave() { try { localStorage.setItem("egm-dens", JSON.stringify([hlId, dnCls, txCls])); } catch (e) {} }
+  function renderActive() { if (!document.getElementById("panel-density").hidden) renderDensity(); if (!document.getElementById("panel-taxbase").hidden) renderTax(); }
+  function setHl(id) { hlId = id; paSave(); renderActive(); }
+  if (!PR) { ["dn", "tx"].forEach(k => { document.getElementById(k + "missing").hidden = false; document.getElementById(k + "body").hidden = true; }); }
+  else {
+    dnEls.cls.value = dnCls; txEls.cls.value = txCls;
+    dnEls.cls.addEventListener("change", () => { dnCls = dnEls.cls.value; paSave(); renderDensity(); });
+    txEls.cls.addEventListener("change", () => { txCls = txEls.cls.value; paSave(); renderTax(); });
+    [dnEls, txEls].forEach(e => e.nb.addEventListener("change", () => { const id = nameToId.get(e.nb.value.trim().toLowerCase()); if (id) setHl(id); else e.nb.value = byId.get(hlId).name; }));
+  }
+  function csvDown(name, head, lines) {
+    const q = s => `"${String(s).replace(/"/g, '""')}"`;
+    const blob = new Blob([[head.map(q).join(",")].concat(lines.map(l => l.map(v => v == null ? "" : typeof v === "number" ? v : q(v)).join(","))).join("\n")], { type: "text/csv" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+  // sortable table. cols: [key, label, getter(row), numeric, formatter]
+  function rtable(el, cols, rows, st, redraw) {
+    const sc = cols.find(c => c[0] === st.k);
+    const sorted = rows.slice().sort((a, b) => { const va = sc[2](a), vb = sc[2](b); if (va == null) return 1; if (vb == null) return -1; return st.dir * (sc[3] ? va - vb : String(va).localeCompare(String(vb))); });
+    el.innerHTML = `<thead><tr>${cols.map(c => `<th class="${c[3] ? "n" : ""}" data-k="${c[0]}" ${c[0] === st.k ? `aria-sort="${st.dir > 0 ? "ascending" : "descending"}"` : ""}>${c[1]}</th>`).join("")}</tr></thead><tbody>` +
+      sorted.map(r => `<tr data-id="${r.n.id}" class="${r.n.id === hlId ? "hlrow" : ""}">${cols.map(c => { const v = c[2](r); return `<td class="${c[3] ? "n" : ""}">${v == null || (typeof v === "number" && !isFinite(v)) ? "–" : c[4] ? c[4](v) : v}</td>`; }).join("")}</tr>`).join("") + "</tbody>";
+    el.querySelectorAll("th").forEach(th => th.addEventListener("click", () => { if (st.k === th.dataset.k) st.dir *= -1; else { st.k = th.dataset.k; const c = cols.find(x => x[0] === st.k); st.dir = c[3] && c[0] !== "rank" ? -1 : 1; } redraw(); }));
+    el.querySelectorAll("tbody tr").forEach(tr => tr.addEventListener("click", () => setHl(tr.dataset.id)));
+    return sorted;
+  }
+  const noData = n => `<div class="note">${n.name} has no figures here. Neighbourhoods with under about 1 hectare of built residential land or fewer than 20 homes are left out.</div>`;
+
+  // scatter: progress against plan (x) vs built density (y)
+  function scatter(el, pts, hl, med) {
+    const nar = innerWidth < 600, W = nar ? 400 : 720, H = nar ? 340 : 380, m = { t: 14, r: 12, b: 42, l: nar ? 46 : 52 };
+    const x = d3.scaleLinear().domain([0, 110]).range([m.l, W - m.r]);
+    const y = d3.scaleLinear().domain([0, d3.max(pts, d => d.y) || 1]).nice(5).range([H - m.b, m.t]);
+    const s = d3.select(el).html("").append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("role", "img").attr("aria-label", "Progress against plan and built density, one dot per neighbourhood");
+    s.append("g").attr("class", "grid").selectAll("line").data(y.ticks(5)).join("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", d => y(d)).attr("y2", d => y(d));
+    s.append("g").selectAll("text").data(y.ticks(5)).join("text").attr("x", m.l - 6).attr("y", d => y(d) + 4).attr("text-anchor", "end").text(d3.format("~s"));
+    s.append("g").selectAll("text").data([0, 25, 50, 75, 100]).join("text").attr("x", d => x(d)).attr("y", H - m.b + 16).attr("text-anchor", "middle").text(d => d + "%");
+    s.append("text").attr("x", (m.l + W - m.r) / 2).attr("y", H - 6).attr("text-anchor", "middle").text("Progress against plan (capped at 110%)");
+    s.append("text").attr("transform", `rotate(-90)`).attr("x", -(m.t + H - m.b) / 2).attr("y", 12).attr("text-anchor", "middle").text("Built density, homes per ha");
+    s.append("line").attr("x1", x(100)).attr("x2", x(100)).attr("y1", m.t).attr("y2", H - m.b).attr("stroke", css("--rule")).attr("stroke-dasharray", "2 3");
+    s.append("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", y(med)).attr("y2", y(med)).attr("stroke", css("--ink-3")).attr("stroke-dasharray", "5 4");
+    s.append("text").attr("x", W - m.r - 4).attr("y", y(med) - 5).attr("text-anchor", "end").text(`Citywide median ${fmt1(med)}`);
+    const tipFor = d => `<b>${d.n.name}</b><div class="r"><span>Built density</span><span>${fmt1(bdOf(d.n))}</span></div><div class="r"><span>Gross density</span><span>${fmt1(pr(d.n.id).gross_density)}</span></div><div class="r"><span>Progress against plan</span><span>${d3.format(".0f")(d.n.buildout)}%</span></div>`;
+    const dot = (d, hlt) => s.append("circle").attr("cx", x(Math.min(110, Math.max(0, d.x)))).attr("cy", y(d.y)).attr("r", hlt ? 8 : 4.5)
+      .attr("fill", css(hlt ? "--s3" : "--s-other")).attr("fill-opacity", hlt ? 1 : 0.55).attr("stroke", hlt ? css("--panel") : "none").attr("stroke-width", 2).style("cursor", "pointer")
+      .on("mousemove", e => showTip(e, tipFor(d))).on("mouseleave", hideTip).on("click", () => setHl(d.n.id));
+    pts.filter(d => d.n.id !== hl).forEach(d => dot(d, false));
+    const h = pts.find(d => d.n.id === hl);
+    if (h) {
+      dot(h, true);
+      const px = x(Math.min(110, Math.max(0, h.x))), left = px > W * 0.65;
+      s.append("text").attr("x", px + (left ? -13 : 13)).attr("y", y(h.y) - 9).attr("text-anchor", left ? "end" : "start").attr("style", `fill:${css("--ink")};font-weight:700;font-size:12px`).text(h.n.name);
+    }
+  }
+
+  // horizontal bars; rows: [{label, hl, parts:[{v, color, name}]}]
+  function hbars(el, rows, tf, aria) {
+    const W = 520, rh = 30, m = { t: 6, r: 76, b: 6, l: 128 }, H = m.t + m.b + rows.length * rh;
+    const x = d3.scaleLinear().domain([0, d3.max(rows, r => d3.sum(r.parts, q => q.v)) || 1]).range([m.l, W - m.r]);
+    const s = d3.select(el).html("").append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("role", "img").attr("aria-label", aria);
+    rows.forEach((r, i) => {
+      const y0 = m.t + i * rh, g = s.append("g"), tot = d3.sum(r.parts, q => q.v);
+      if (r.hl) g.append("rect").attr("x", 0).attr("y", y0 + 4).attr("width", 3).attr("height", rh - 8).attr("fill", css("--s3"));
+      g.append("text").attr("x", 9).attr("y", y0 + rh / 2 + 4).attr("style", `fill:${css(r.hl ? "--ink" : "--ink-3")};font-weight:${r.hl ? 700 : 400}`).text(shortName(r.label));
+      let acc = 0;
+      r.parts.forEach(q => { if (q.v > 0) g.append("rect").attr("x", x(acc)).attr("y", y0 + 5).attr("width", Math.max(1, x(acc + q.v) - x(acc) - (acc > 0 ? 1 : 0))).attr("height", rh - 10).attr("fill", q.color); acc += q.v; });
+      g.append("text").attr("x", x(tot) + 6).attr("y", y0 + rh / 2 + 4).attr("style", `fill:${css("--ink")}`).text(tf(tot));
+      g.append("rect").attr("x", 0).attr("y", y0).attr("width", W).attr("height", rh).attr("fill", "transparent")
+        .on("mousemove", e => showTip(e, `<b>${r.label}</b>` + (r.parts.length > 1 ? r.parts.map(q => `<div class="r"><span><i class="sw" style="background:${q.color}"></i>${q.name}</span><span>${tf(q.v)}</span></div>`).join("") : "") + `<div class="r"><span>Total</span><span>${tf(tot)}</span></div>`))
+        .on("mouseleave", hideTip);
+    });
+  }
+
+  function renderDensity() {
+    if (!PR) return;
+    dnEls.nb.value = txEls.nb.value = byId.get(hlId).name;
+    const n = byId.get(hlId), p = pr(hlId), has = paOk(n);
+    document.getElementById("dnmsg").hidden = has; document.getElementById("dnkpis").hidden = !has;
+    document.getElementById("dnmsg").innerHTML = has ? "" : `<b>${n.name}</b> has no density figures. It has under about 1 hectare of built residential land or fewer than 20 homes.`;
+    if (has) document.getElementById("dnkpis").innerHTML = [
+      [fmt1(p.built_density), "Built density, homes per hectare"],
+      [p.gross_density != null ? fmt1(p.gross_density) : "n/a", "Gross density, homes per hectare"],
+      [`${ord(rkD.get(hlId))} of ${PALL.length}`, "Rank on built density"],
+      [n.buildout != null ? d3.format(".0f")(n.buildout) + "%" : "No plan", "Progress against plan"],
+      [p.far != null ? p.far.toFixed(2) : "n/a", "Floor area ratio"],
+    ].map(([v, l]) => `<div class="kpi"><small>${l}</small><b>${v}</b></div>`).join("");
+
+    const pts = PALL.filter(m => m.buildout != null && (clsOk(m, dnCls) || m.id === hlId)).map(m => ({ n: m, x: m.buildout, y: bdOf(m) }));
+    scatter(document.getElementById("dnscatter"), pts, hlId, medBD);
+
+    const set = [hlId, ...DN_REFS.filter(i => i !== hlId)].map(i => byId.get(i)).filter(paOk);
+    document.getElementById("dnbars").innerHTML = "";
+    barChart(document.getElementById("dnbars"), set.map(m => m.name), [
+      { key: "built", label: "Built density", color: css("--s1"), values: set.map(bdOf) },
+      { key: "gross", label: "Gross density", color: css("--s-other"), values: set.map(m => pr(m.id).gross_density) },
+    ], { grouped: true, w: innerWidth < 600 ? 400 : 520, h: 260, xlab: innerWidth < 600 ? (c => c.length > 8 ? c.slice(0, 7) + "…" : c) : shortName, tf: fmt1, aria: "Built density and gross density, homes per hectare" });
+    if (!has) document.getElementById("dnbars").insertAdjacentHTML("beforeend", noData(n));
+
+    // land composition
+    const L = p && p.land, landEl = document.getElementById("dnland");
+    if (!L) { landEl.innerHTML = noData(n); document.getElementById("dnlandnote").textContent = ""; }
+    else {
+      const cats = [
+        ["Homes, finished", L.res_built, "--s1", 1], ["Rental buildings, finished", L.rental_built, "--s2", 1],
+        ["Residential, not yet built or under construction", (L.res_unbuilt || 0) + (L.rental_unbuilt || 0), "--s5", 1],
+        ["Non-residential", L.nonres_built, "--s4", 1], ["Non-residential land not built on", L.nonres_unbuilt, "--s4", 0.45],
+        ["Unsubdivided land", L.legacy, "--s-other", 1], ["Farmland", L.farmland, "--s-other", 0.5],
+        ["Roads, parks, schools and other land not on the assessment roll", L.unassessed, "--nodata", 1],
+      ].map(c => ({ l: c[0], v: c[1] || 0, c: c[2], o: c[3] }));
+      const tot = d3.sum(cats, c => c.v) || 1;
+      document.getElementById("dnlandnote").textContent = `${n.name}: ${fmt1(tot)} hectares in total. Share of the neighbourhood's whole area.`;
+      landEl.innerHTML = `<div class="stackbar" role="img" aria-label="Land composition of ${n.name}">${cats.filter(c => c.v > 0).map(c => `<i title="${c.l}: ${fmt1(c.v)} ha" style="width:${100 * c.v / tot}%;background:var(${c.c});opacity:${c.o}"></i>`).join("")}</div>` +
+        `<div class="landkey">${cats.map(c => `<div style="${c.v > 0 ? "" : "opacity:0.55"}"><i class="sw" style="background:var(${c.c});opacity:${c.o}"></i><span>${c.l}</span><span class="num">${fmt1(c.v)} ha</span><span class="num">${d3.format(".1f")(100 * c.v / tot)}%</span></div>`).join("")}</div>`;
+    }
+
+    // same stage
+    const stRows = nbs.filter(m => pr(m.id) && pr(m.id).same_stage && m.first_permit && Object.values(pr(m.id).same_stage).some(v => v != null)).map(m => ({ n: m, ss: pr(m.id).same_stage, yr: +m.first_permit.date.slice(0, 4) }));
+    const stCols = [["name", "Neighbourhood", r => `<b>${r.n.name}</b>`, false], ["yr", "First home permit", r => r.yr, true, v => v], ...["5", "10", "15"].map(k => ["s" + k, `Homes per ha at ${k} years`, r => r.ss[k] != null ? r.ss[k] : null, true, fmt1])];
+    document.getElementById("dnstage").innerHTML = "";
+    if (!stRows.length) document.getElementById("dnstage").innerHTML = `<tbody><tr><td>No neighbourhoods to show.</td></tr></tbody>`;
+    else rtable(document.getElementById("dnstage"), stCols, stRows, dnStageSt, renderDensity);
+
+    const rows = PALL.filter(m => clsOk(m, dnCls)).map(m => ({ n: m, p: pr(m.id), rank: rkD.get(m.id) }));
+    rtable(document.getElementById("dnrank"), DN_COLS, rows, dnSt, renderDensity);
+    dnRows = rows;
+  }
+  const rentShare = p => p.land && p.land.res_built != null && p.land.rental_built != null && p.land.res_built + p.land.rental_built > 0 ? 100 * p.land.rental_built / (p.land.res_built + p.land.rental_built) : null;
+  const dnSt = { k: "rank", dir: 1 }, dnStageSt = { k: "yr", dir: 1 }, txSt = { k: "rank", dir: 1 };
+  let dnRows = [], txRows = [];
+  const DN_COLS = [
+    ["rank", "Rank", r => r.rank, true, v => v], ["name", "Neighbourhood", r => r.n.name, false, v => `<b>${v}</b>`], ["cls", "Type", r => r.n.class, false],
+    ["homes", "Homes", r => r.p.homes, true, fmt], ["bd", "Built density", r => r.p.built_density, true, fmt1], ["gd", "Gross density", r => r.p.gross_density, true, fmt1],
+    ["prog", "Progress against plan", r => r.n.buildout, true, v => d3.format(".0f")(v) + "%"], ["far", "Floor area ratio", r => r.p.far, true, v => v.toFixed(2)],
+    ["rent", "Rental share of built residential land", r => rentShare(r.p), true, v => d3.format(".0f")(v) + "%"],
+  ];
+  const TX_COLS = [
+    ["rank", "Rank", r => r.rank, true, v => v], ["name", "Neighbourhood", r => r.n.name, false, v => `<b>${v}</b>`], ["cls", "Type", r => r.n.class, false],
+    ["tpha", "Residential tax per ha", r => r.p.res_tax_per_ha, true, money0], ["rent", "Of which rental", r => r.p.tax && (r.p.tax.res || 0) + (r.p.tax.rental || 0) > 0 ? 100 * (r.p.tax.rental || 0) / ((r.p.tax.res || 0) + (r.p.tax.rental || 0)) : null, true, v => d3.format(".0f")(v) + "%"],
+    ["tphome", "Tax per home", r => r.p.tax_per_home, true, money0], ["bd", "Built density", r => r.p.built_density, true, fmt1],
+    ["house", "Typical house", r => valOf(r.p, "house"), true, money0], ["condo", "Typical condo", r => valOf(r.p, "condo"), true, money0],
+  ];
+  function valOf(p, k) { const v = p && p.values && p.values[PA.roll_year] && p.values[PA.roll_year][k]; return v && v[1] >= 10 ? v[0] : null; }
+  document.getElementById("dncsv").addEventListener("click", () => {
+    if (!PR) return;
+    csvDown("edmonton-built-density.csv", ["Rank", "Neighbourhood", "Neighbourhood number", "Type", "Homes", "Built density (homes per ha)", "Gross density (homes per ha)", "Net density (homes per ha)", "Progress against plan (%)", "Floor area ratio", "Rental share of built residential land (%)"],
+      dnRows.slice().sort((a, b) => a.rank - b.rank).map(r => [r.rank, r.n.name, r.n.id, r.n.class, r.p.homes, r.p.built_density, r.p.gross_density, r.p.net_density, r.n.buildout != null ? +r.n.buildout.toFixed(1) : null, r.p.far, (v => v == null ? null : +v.toFixed(1))(rentShare(r.p))]));
+  });
+  document.getElementById("txcsv").addEventListener("click", () => {
+    if (!PR) return;
+    csvDown("edmonton-residential-tax-per-hectare.csv", ["Rank", "Neighbourhood", "Neighbourhood number", "Type", "Residential municipal tax per ha ($)", "Rental share of residential tax (%)", "Municipal tax per home ($)", "Built density (homes per ha)", `Typical house value, ${PA.roll_year} ($)`, `Typical condo value, ${PA.roll_year} ($)`],
+      txRows.slice().sort((a, b) => a.rank - b.rank).map(r => [r.rank, r.n.name, r.n.id, r.n.class, r.p.res_tax_per_ha, (v => v == null ? null : +v.toFixed(1))(TX_COLS[4][2](r)), r.p.tax_per_home, r.p.built_density, valOf(r.p, "house"), valOf(r.p, "condo")]));
+  });
+
+  function renderTax() {
+    if (!PR) return;
+    dnEls.nb.value = txEls.nb.value = byId.get(hlId).name;
+    const n = byId.get(hlId), p = pr(hlId), has = paTaxOk(n);
+    document.getElementById("txmsg").hidden = has; document.getElementById("txkpis").hidden = !has;
+    document.getElementById("txmsg").innerHTML = has ? "" : `<b>${n.name}</b> has no tax figures. It has under about 1 hectare of built residential land or fewer than 20 homes.`;
+    const vcell = k => { const v = p && p.values && p.values[PA.roll_year] && p.values[PA.roll_year][k]; return v && v[1] >= 10 ? "$" + fmt(v[0]) : "n/a"; };
+    if (has) document.getElementById("txkpis").innerHTML = [
+      [money0(p.res_tax_per_ha), "Residential municipal tax per hectare"],
+      [money0(p.tax_per_home), "Municipal tax per home"],
+      [`${ord(rkT.get(hlId))} of ${TALL.length}`, "Rank on residential tax per hectare"],
+      [vcell("house"), `Typical house value, ${PA.roll_year} roll`],
+      [vcell("condo"), `Typical condo value, ${PA.roll_year} roll`],
+    ].map(([v, l]) => `<div class="kpi"><small>${l}</small><b>${v}</b></div>`).join("");
+
+    const set = [hlId, ...DN_REFS.filter(i => i !== hlId)].map(i => byId.get(i)).filter(paTaxOk);
+    const ha = m => { const L = pr(m.id).land; return (L.res_built || 0) + (L.rental_built || 0); };
+    const rowsHa = set.map(m => ({ label: m.name, hl: m.id === hlId, parts: [{ v: (pr(m.id).tax.res || 0) / ha(m), color: css("--s1"), name: "Homes" }, { v: (pr(m.id).tax.rental || 0) / ha(m), color: css("--s2"), name: "Rental buildings" }] }));
+    rowsHa.push({ label: "Citywide median", parts: [{ v: medTPH, color: css("--s-other"), name: "Citywide median" }] });
+    hbars(document.getElementById("txha"), rowsHa, money0, "Residential municipal tax per hectare");
+    const rowsHome = set.map(m => ({ label: m.name, hl: m.id === hlId, parts: [{ v: tphomeOf(m), color: css("--s1"), name: "Per home" }] }));
+    rowsHome.push({ label: "Citywide median", parts: [{ v: medTHome, color: css("--s-other"), name: "Citywide median" }] });
+    hbars(document.getElementById("txhome"), rowsHome, money0, "Municipal tax per home");
+
+    const vEl = document.getElementById("txvalues");
+    const mk = (k, nm, c) => ({ name: nm, color: css(c), pts: Object.keys((p && p.values) || {}).sort().filter(y => p.values[y][k] && p.values[y][k][1] >= 10).map(y => ({ x: y, v: p.values[y][k][0] })) });
+    const ser = [mk("house", "House", "--s1"), mk("condo", "Condo unit", "--s2")].filter(s => s.pts.length);
+    if (!ser.length) vEl.innerHTML = noData(n).replace("no figures here", "too few properties to show typical values");
+    else lineChart(vEl, ser, { w: 520, h: 240, yf: v => "$" + d3.format("~s")(v), tf: money0, aria: `Typical house and condo values in ${n.name}` });
+
+    const nr = p ? p.nonres_value_per_ha : null, m1 = v => v == null ? "n/a" : v >= 1e6 ? "$" + d3.format(".1f")(v / 1e6) + " million" : "$" + fmt(v);
+    document.getElementById("txnonres").innerHTML = `<h3 style="font-size:18px;margin-bottom:8px">Non-residential assessed value per hectare</h3><div class="facts tight"><div><b>${m1(nr)}</b><small>${n.name}, finished non-residential property</small></div><div><b>${m1(medNR)}</b><small>Citywide median</small></div></div><p class="note" style="margin:12px 0 0">Assessed value, not tax. The City's open data includes tax-exempt properties such as post-secondary campuses, hospitals and City-owned land without marking them, so tax can't be estimated reliably for non-residential property.</p>`;
+
+    const rows = TALL.filter(m => clsOk(m, txCls)).map(m => ({ n: m, p: pr(m.id), rank: rkT.get(m.id) }));
+    rtable(document.getElementById("txrank"), TX_COLS, rows, txSt, renderTax);
+    txRows = rows;
+  }
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderActive);
+  if (PA) {
+    const sr = PA.sources, rt = PA.municipal_rates, r4 = v => v.toFixed(4);
+    const fp = document.getElementById("faq-tax-p");
+    if (fp && rt) fp.innerHTML = `Each property's assessed value times the City's ${PA.tax_rate_year} municipal tax rate for its class: $${r4(rt["Residential"])} per $1,000 of value for residential and $${r4(rt["Other Residential"])} per $1,000 for other residential (rental buildings of four or more units). Education tax is left out. These are estimates, not actual tax bills.`;
+  }
+
   // ---------- method
   const S = D.sources;
   const FAQ_Q = [
@@ -1343,6 +1694,7 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
     "Where do the housing starts numbers come from?",
     "What does \"denser than plan\" mean?",
     "What do Developing, Redeveloping and Industrial mean?",
+    "Where do the density and tax figures come from?",
   ];
   document.getElementById("method").innerHTML = [
     `<b>Building permits</b> (<a href="${S.building_permits}" target="_blank" rel="noopener">General Building Permits</a>, 2009 onward): every permit that adds or removes dwelling units, placed in neighbourhoods and plan areas by its coordinates. "Net units" subtracts units removed by demolitions. Permits are issued approvals, not completions, and large apartment projects can appear in the year the permit was issued.`,
@@ -1356,13 +1708,14 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
     `<b>Housing starts (CMHC tab)</b>: CMHC Starts and Completions Survey, retrieved weekly from CMHC's Housing Market Information Portal for the Edmonton region (CMA), the City of Edmonton and 13 other municipalities individually (census subdivisions), with the remaining small municipalities combined, by dwelling type and intended market. Definitions follow <a href="https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodologies-starts-completions-market-absorption-survey" target="_blank" rel="noopener">CMHC's survey methodology</a>. Used under the CMHC Licence Agreement for the Use of Data.`,
     `<b>Mix vs plan</b> compares the plan's low-density (single/semi-detached) share of units with the share of units actually permitted in the plan area since 2015. More than 10 points below plan is flagged "denser than plan"; more than 10 points above, "less dense than plan".`,
     `<b>Classification</b> (Developing / Redeveloping / Industrial) comes from the City's neighbourhood classification on development permits. Redeveloping covers mature and established neighbourhoods.`,
+    PA ? `<b>Density and tax base</b>: <a href="${PA.sources.current}" target="_blank" rel="noopener">Property Assessment Data (current)</a> and <a href="${PA.sources.historical}" target="_blank" rel="noopener">Property Assessment Data (historical)</a> for lots, values and land use; <a href="${PA.sources.info}" target="_blank" rel="noopener">Property Information</a> for lot sizes and building details; and <a href="${PA.sources.tax}" target="_blank" rel="noopener">Property and Education Tax Rates</a> for the municipal rates. Figures use the ${PA.roll_year} roll, with conditions as of ${PA.condition_date}.` : `The density and tax figures come from the City of Edmonton's Property Assessment Data, Property Information and Property and Education Tax Rates open data. They are not available right now.`,
   ].map((t, i) => `<details><summary>${FAQ_Q[i]}</summary><p>${t}</p></details>`).join("");
   document.querySelectorAll("[data-goto]").forEach(a => a.addEventListener("click", e => { e.preventDefault(); setTab(a.dataset.goto); history.replaceState(null, "", "#" + a.dataset.goto); document.querySelector(".tabs").scrollIntoView(); }));
 
   // ---------- initial state
   let m0 = 0, nb0 = null, t0 = "map";
   try { m0 = +(localStorage.getItem("egm-metric") || 0); nb0 = localStorage.getItem("egm-nb"); t0 = localStorage.getItem("egm-tab") || "map"; } catch (e) {}
-  const h = location.hash.slice(1); if (["map", "plans", "pace", "rankings", "cmhc", "compare", "table", "faq"].includes(h)) t0 = h;
+  const h = location.hash.slice(1); if (["map", "plans", "pace", "rankings", "density", "taxbase", "cmhc", "compare", "table", "faq"].includes(h)) t0 = h;
   msel.value = String(m0 < METRICS.length ? m0 : 0);
   paint();
   select(nb0 && byId.has(nb0) ? nb0 : nameToId.get("the orchards at ellerslie") || nbs[0].id);

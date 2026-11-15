@@ -15,6 +15,9 @@ buildout targets in approved statutory plans (NSPs / NASPs).
   fooled by houses on old acreages (currently Horse Hill ASP and Marquis NSP).
 - `pipeline/build_cmhc.py` — fetches CMHC housing starts, completions and units under construction (City of
   Edmonton, the Edmonton CMA and 13 other municipalities, monthly from 2009, by dwelling type and intended market) into `data/cmhc.json`.
+- `pipeline/build_parcels.py` — joins the current assessment roll to Property Information by account number
+  and writes `data/parcels.json` for the Density and Tax base tabs. Runs after `build_data.py` (it reads
+  `data/growth.json`).
 - `pipeline/extract_plan_text.py`, `pipeline/render_pages.py` — helpers for reading plan PDFs.
 - `refresh.sh` — re-pulls all data.
 
@@ -69,9 +72,33 @@ The data now covers 14 municipalities individually (the City of Edmonton plus 13
 the region total minus those 14. If a fetch for a smaller municipality fails, its previous figures are carried forward
 and the tab says which areas were not refreshed.
 
+## Density and tax base
+- **Land** comes from lot sizes on the assessment roll (square metres). Condo units each carry their share of
+  the parcel, so lot sizes add up without double counting. Tax-exempt land such as roads, parks and schools
+  is not on the roll.
+- An account with **no year built** has no finished building (an empty lot or one under construction).
+- **Unsubdivided parcels** (no registered plan in the legal description and larger than 2 ha) are kept
+  separate: one old title can hold a few buildings on a large area of undeveloped land (e.g. Griesbach).
+- Accounts with no neighbourhood ID on the roll (e.g. "CHAPPELLE AREA") are placed by their coordinates.
+- **Homes** for density are homes in finished buildings: estimated dwellings now minus units on permits from
+  the last three years that have no occupancy date yet (occupancy dates are recorded for most permits from
+  2021). Older permits are assumed finished.
+- **Built density** = those homes ÷ residential land (homes and rental buildings) with a finished building.
+  **Gross density** = homes ÷ the whole neighbourhood.
+- **Municipal tax** = assessed value × the City's municipal rate for the class (education tax excluded).
+  Only residential and "other residential" (rental buildings of 4+ units) tax is shown. The open roll
+  includes tax-exempt institutions (e.g. NAIT, 11762 106 St, assessed as commercial) without flagging them,
+  so non-residential property is shown as assessed value per hectare, not tax.
+- **Typical values** are medians: houses = residential accounts on their own lot ("Lot:" in the legal
+  description) with a building; condos = "Unit:" accounts worth at least $75,000, which leaves out parking
+  stalls and storage units.
+- The 2024 historical roll shows residential land dropping and recovering in many neighbourhoods, so it is
+  left out of land trends.
+
 ## Data sources (data.edmonton.ca)
 General Building Permits (24uj-dj8v), Development Permits (2ccn-pwtu), Property Assessment current
-(q7d6-ambg) and historical (qi6a-xuwt), Neighbourhoods (65fr-66s6), Plans in Effect (jdmr-bidz),
+(q7d6-ambg) and historical (qi6a-xuwt), Property Information (dkk9-cj3x), Property and Education Tax
+Rates (pwis-wc4c), Neighbourhoods (65fr-66s6), Plans in Effect (jdmr-bidz),
 2016/2021 federal and 2019 municipal census by neighbourhood.
 
 ## Known limits
