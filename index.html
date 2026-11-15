@@ -200,6 +200,9 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
 .catch tbody tr { cursor: default; }
 .facts.tight { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .card { background: var(--panel); border: 1px solid var(--rule); padding: 14px 16px; min-width: 0; }
+.refrow { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: end; margin: 4px 0 6px; }
+.refrow[hidden] { display: none; }
+.refdesc { margin: 2px 0 12px; }
 .picks { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .pick { display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 10px; border: 1px solid var(--rule); border-radius: 999px; font-size: 13px; background: var(--panel); }
 .pick button { border: 0; background: none; cursor: pointer; color: var(--ink-3); padding: 0 6px; font-size: 15px; line-height: 1; }
@@ -401,7 +404,17 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
         <label for="dnnb">Highlight a neighbourhood
           <input type="search" id="dnnb" list="nblist" placeholder="Type a name">
         </label>
+        <label for="dnref">Compare with
+          <select id="dnref"><option value="ref">Reference set</option><option value="stage">Similar stage (progress against plan)</option><option value="era">Same era (first home permit)</option><option value="near">Nearby</option><option value="top">Highest in the city</option><option value="custom">Choose your own</option></select>
+        </label>
       </div>
+      <div class="refrow" id="dncustom" hidden>
+        <label for="dnadd">Add a neighbourhood (up to 6)
+          <input type="search" id="dnadd" list="nblist" placeholder="Type a name">
+        </label>
+        <div class="picks" id="dnpicks"></div>
+      </div>
+      <div class="note refdesc" id="dnrefdesc"></div>
       <div class="callout" id="dnmsg" hidden></div>
       <div class="kpis" id="dnkpis"></div>
       <div class="card chart">
@@ -412,7 +425,7 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
       <div class="cmpgrid" style="margin-top:20px">
         <div class="card chart">
           <h3>Built density vs gross density</h3>
-          <div class="note">Homes per hectare, for the highlighted neighbourhood and five others for reference.</div>
+          <div class="note">Homes per hectare, for the highlighted neighbourhood and its comparison set.</div>
           <div class="serieskey"><span><i class="sw" style="background:var(--s1)"></i>Built density</span><span><i class="sw" style="background:var(--s-other)"></i>Gross density</span></div>
           <div id="dnbars"></div>
         </div>
@@ -448,7 +461,17 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
         <label for="txnb">Highlight a neighbourhood
           <input type="search" id="txnb" list="nblist" placeholder="Type a name">
         </label>
+        <label for="txref">Compare with
+          <select id="txref"><option value="ref">Reference set</option><option value="stage">Similar stage (progress against plan)</option><option value="era">Same era (first home permit)</option><option value="near">Nearby</option><option value="top">Highest in the city</option><option value="custom">Choose your own</option></select>
+        </label>
       </div>
+      <div class="refrow" id="txcustom" hidden>
+        <label for="txadd">Add a neighbourhood (up to 6)
+          <input type="search" id="txadd" list="nblist" placeholder="Type a name">
+        </label>
+        <div class="picks" id="txpicks"></div>
+      </div>
+      <div class="note refdesc" id="txrefdesc"></div>
       <div class="callout" id="txmsg" hidden></div>
       <div class="kpis" id="txkpis"></div>
       <div class="cmpgrid">
@@ -1486,6 +1509,44 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
   function paSave() { try { localStorage.setItem("egm-dens", JSON.stringify([hlId, dnCls, txCls])); } catch (e) {} }
   function renderActive() { if (!document.getElementById("panel-density").hidden) renderDensity(); if (!document.getElementById("panel-taxbase").hidden) renderTax(); }
   function setHl(id) { hlId = id; paSave(); renderActive(); }
+
+  // comparison set, shared by both tabs
+  const REF_MODES = ["ref", "stage", "era", "near", "top", "custom"];
+  let refMode = "ref", customIds = DN_REFS.slice();
+  try { const s = JSON.parse(localStorage.getItem("egm-ref") || "null"); if (s) { if (REF_MODES.includes(s[0])) refMode = s[0]; if (Array.isArray(s[1])) customIds = s[1].filter(i => byId.has(i)).slice(0, 6); } } catch (e) {}
+  const refSave = () => { try { localStorage.setItem("egm-ref", JSON.stringify([refMode, customIds])); } catch (e) {} };
+  const CENT = new Map(NB.features.map(f => [String(f.properties.id), d3.geoCentroid(f)]));
+  const fpYear = m => m.first_permit && m.first_permit.date ? +m.first_permit.date.slice(0, 4) : null;
+  // returns { ids, desc } for the highlighted neighbourhood; ok = tab's "has figures" test, metric = tab's headline measure, cls = tab's class filter
+  function refSet(ok, metric, cls) {
+    const hl = byId.get(hlId), nm = hl.name;
+    const pool = nbs.filter(m => m.id !== hlId && ok(m) && clsOk(m, cls));
+    const closest = (f, why, only) => {
+      const v0 = f(hl);
+      const cands = only ? pool.filter(only) : pool;
+      if (v0 == null) return { ids: DN_REFS.filter(i => i !== hlId), desc: `${nm} has no ${why}, so the reference set is shown instead.` };
+      return { ids: cands.filter(m => f(m) != null).sort((a, b) => Math.abs(f(a) - v0) - Math.abs(f(b) - v0)).slice(0, 5).map(m => m.id), desc: null };
+    };
+    let r;
+    if (refMode === "stage") { r = closest(m => m.buildout, "approved plan to measure progress against"); r.desc = r.desc || `The five neighbourhoods closest to ${nm} in progress against their plans (${nm}: ${d3.format(".0f")(hl.buildout)}%).`; }
+    else if (refMode === "era") { r = closest(fpYear, "first home permit in the permit data (2009 on)", m => ((((m.dwell || {})["2016"]) || 0) < 0.5 * ((pr(m.id) || {}).homes || 0))); r.desc = r.desc || `The five new neighbourhoods whose first home permit is closest in time to ${nm}'s (${fpYear(hl)}). Only neighbourhoods where most homes were built after 2016 are included, since an older neighbourhood's first permit in the data is infill.`; }
+    else if (refMode === "near") { const c0 = CENT.get(String(hlId)); r = c0 ? { ids: pool.filter(m => CENT.has(String(m.id))).sort((a, b) => d3.geoDistance(CENT.get(String(a.id)), c0) - d3.geoDistance(CENT.get(String(b.id)), c0)).slice(0, 5).map(m => m.id), desc: `The five neighbourhoods closest to ${nm}, measured centre to centre.` } : { ids: DN_REFS, desc: "Location not available; showing the reference set." }; }
+    else if (refMode === "top") r = { ids: pool.slice().sort((a, b) => metric(b) - metric(a)).slice(0, 5).map(m => m.id), desc: `The five highest neighbourhoods in the city on this tab's headline measure.` };
+    else if (refMode === "custom") r = { ids: customIds.filter(i => i !== hlId), desc: customIds.length ? "Your own selection." : "Add neighbourhoods to compare with." };
+    else r = { ids: DN_REFS.filter(i => i !== hlId), desc: "Reference set: Wîhkwêntôwin (downtown-edge high-rise), Westmount (mature), Griesbach (large redevelopment), Summerside (finished suburb) and Glenridding Heights (recent suburb)." };
+    if (refMode !== "ref" && refMode !== "custom") r.desc += cls === "all" ? "" : " Follows the neighbourhood filter.";
+    return r;
+  }
+  function renderRefControls(k) {
+    document.getElementById(k + "ref").value = refMode;
+    document.getElementById(k + "custom").hidden = refMode !== "custom";
+    document.getElementById(k + "picks").innerHTML = customIds.map((id, i) => `<span class="pick">${byId.get(id).name}<button type="button" aria-label="Remove ${byId.get(id).name}" data-i="${i}">×</button></span>`).join("");
+    document.querySelectorAll(`#${k}picks button`).forEach(b => b.addEventListener("click", () => { customIds.splice(+b.dataset.i, 1); refSave(); renderActive(); }));
+  }
+  if (PR) ["dn", "tx"].forEach(k => {
+    document.getElementById(k + "ref").addEventListener("change", e => { refMode = e.target.value; refSave(); renderActive(); });
+    document.getElementById(k + "add").addEventListener("change", e => { const id = nameToId.get(e.target.value.trim().toLowerCase()); if (id && !customIds.includes(id) && customIds.length < 6) { customIds.push(id); refSave(); e.target.value = ""; renderActive(); } });
+  });
   if (!PR) { ["dn", "tx"].forEach(k => { document.getElementById(k + "missing").hidden = false; document.getElementById(k + "body").hidden = true; }); }
   else {
     dnEls.cls.value = dnCls; txEls.cls.value = txCls;
@@ -1595,7 +1656,10 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
     const pts = PALL.filter(m => m.buildout != null && (clsOk(m, dnCls) || m.id === hlId)).map(m => ({ n: m, x: m.buildout, y: bdOf(m) }));
     scatter(document.getElementById("dnscatter"), pts, hlId, medBD);
 
-    const set = [hlId, ...DN_REFS.filter(i => i !== hlId)].map(i => byId.get(i)).filter(paOk);
+    renderRefControls("dn");
+    const RS = refSet(paOk, bdOf, dnCls);
+    document.getElementById("dnrefdesc").textContent = RS.desc;
+    const set = [hlId, ...RS.ids].map(i => byId.get(i)).filter(paOk);
     document.getElementById("dnbars").innerHTML = "";
     hpairs(document.getElementById("dnbars"), set.map(m => ({ label: m.name, hl: m.id === hlId, a: bdOf(m), b: pr(m.id).gross_density })),
       [["Built density", css("--s1")], ["Gross density", css("--s-other")]], fmt1, "Built density and gross density, homes per hectare");
@@ -1671,7 +1735,10 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
       [vcell("condo"), `Typical condo value, ${PA.roll_year} roll`],
     ].map(([v, l]) => `<div class="kpi"><small>${l}</small><b>${v}</b></div>`).join("");
 
-    const set = [hlId, ...DN_REFS.filter(i => i !== hlId)].map(i => byId.get(i)).filter(paTaxOk);
+    renderRefControls("tx");
+    const RS = refSet(paTaxOk, tphaOf, txCls);
+    document.getElementById("txrefdesc").textContent = RS.desc;
+    const set = [hlId, ...RS.ids].map(i => byId.get(i)).filter(paTaxOk);
     const ha = m => { const L = pr(m.id).land; return (L.res_built || 0) + (L.rental_built || 0); };
     const rowsHa = set.map(m => ({ label: m.name, hl: m.id === hlId, parts: [{ v: (pr(m.id).tax.res || 0) / ha(m), color: css("--s1"), name: "Homes" }, { v: (pr(m.id).tax.rental || 0) / ha(m), color: css("--s2"), name: "Rental buildings" }] }));
     rowsHa.push({ label: "Citywide median", parts: [{ v: medTPH, color: css("--s-other"), name: "Citywide median" }] });
