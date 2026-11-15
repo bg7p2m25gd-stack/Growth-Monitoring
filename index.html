@@ -245,8 +245,8 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
     <button class="tab" role="tab" id="tab-rankings" aria-selected="false" data-tab="rankings">Rankings</button>
     <button class="tab" role="tab" id="tab-density" aria-selected="false" data-tab="density">Density</button>
     <button class="tab" role="tab" id="tab-taxbase" aria-selected="false" data-tab="taxbase">Tax base</button>
-    <button class="tab" role="tab" id="tab-cmhc" aria-selected="false" data-tab="cmhc">Housing starts (CMHC)</button>
     <button class="tab" role="tab" id="tab-compare" aria-selected="false" data-tab="compare">Compare</button>
+    <button class="tab" role="tab" id="tab-cmhc" aria-selected="false" data-tab="cmhc">Housing starts (CMHC)</button>
     <button class="tab" role="tab" id="tab-table" aria-selected="false" data-tab="table">All neighbourhoods</button>
     <button class="tab" role="tab" id="tab-faq" aria-selected="false" data-tab="faq">FAQ and sources</button>
   </div>
@@ -494,7 +494,7 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
           <div class="serieskey"><span><i class="sw" style="background:var(--s1)"></i>House</span><span><i class="sw" style="background:var(--s2)"></i>Condo unit</span></div>
           <div id="txvalues"></div>
         </div>
-        <div class="card" id="txnonres"></div>
+        <div class="card chart" id="txnonres"></div>
       </div>
       <div class="tablehead"><div><h2>Ranking by residential tax per hectare</h2><div class="note">Neighbourhoods in the selected group. Rank is among all neighbourhoods with figures. Click a row to highlight it.</div></div><button class="btn" id="txcsv" type="button">Download CSV</button></div>
       <div class="tablewrap" style="max-height:70vh"><table id="txrank"></table></div>
@@ -1452,6 +1452,12 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
       ["Avg res. assessment", n => n.avg_now ? money(n.avg_now) : "–"], ["5-yr assessment change", n => pct(n.avgchg5)],
       ["Primary plan", n => n.primary_plan != null ? plans[n.primary_plan].name : "–"], ["Plan density target", n => n.primary_plan != null ? (plans[n.primary_plan].target.upnrha ? plans[n.primary_plan].target.upnrha + " du/nrha" : "–") : "–"],
       ["Plan buildout", n => n.buildout != null ? d3.format(".0f")(n.buildout) + "%" : "–"],
+      ["Built density (homes / ha of built residential land)", n => { const p = typeof pr === "function" && pr(n.id); return p && p.built_density != null ? fmt1(p.built_density) : "–"; }],
+      ["Floor area ratio", n => { const p = pr(n.id); return p && p.far != null ? p.far.toFixed(2) : "–"; }],
+      ["Residential tax per ha", n => { const p = pr(n.id); return p && p.res_tax_per_ha != null ? "$" + fmt(p.res_tax_per_ha) : "–"; }],
+      ["Municipal tax per home", n => { const p = pr(n.id); return p && p.tax_per_home != null ? "$" + fmt(p.tax_per_home) : "–"; }],
+      ["Typical house value", n => { const p = pr(n.id), v = p && p.values && p.values[PA.roll_year] && p.values[PA.roll_year].house; return v && v[1] >= 10 ? money(v[0]) : "–"; }],
+      ["Typical condo value", n => { const p = pr(n.id), v = p && p.values && p.values[PA.roll_year] && p.values[PA.roll_year].condo; return v && v[1] >= 10 ? money(v[0]) : "–"; }],
     ];
     document.getElementById("cmptable").innerHTML = `<thead><tr><th></th>${ns.map((n, i) => `<th class="n"><i class="sw" style="background:var(${SL[i]})"></i>${n.name}</th>`).join("")}</tr></thead><tbody>` +
       rowsDef.map(([l, f]) => `<tr style="cursor:default"><td>${l}</td>${ns.map(n => `<td class="n">${f(n)}</td>`).join("")}</tr>`).join("") + "</tbody>";
@@ -1754,7 +1760,12 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
     else lineChart(vEl, ser, { w: 520, h: 240, yf: v => "$" + d3.format("~s")(v), tf: money0, aria: `Typical house and condo values in ${n.name}` });
 
     const nr = p ? p.nonres_value_per_ha : null, m1 = v => v == null ? "n/a" : v >= 1e6 ? "$" + d3.format(".1f")(v / 1e6) + " million" : "$" + fmt(v);
-    document.getElementById("txnonres").innerHTML = `<h3 style="font-size:18px;margin-bottom:8px">Non-residential assessed value per hectare</h3><div class="facts tight"><div><b>${m1(nr)}</b><small>${n.name}, finished non-residential property</small></div><div><b>${m1(medNR)}</b><small>Citywide median</small></div></div><p class="note" style="margin:12px 0 0">Assessed value, not tax. The City's open data includes tax-exempt properties such as post-secondary campuses, hospitals and City-owned land without marking them, so tax can't be estimated reliably for non-residential property.</p>`;
+    const nrEl = document.getElementById("txnonres");
+    nrEl.innerHTML = `<h3>Non-residential assessed value per hectare</h3><div class="note">Assessed value of finished non-residential property per hectare of its land, for the highlighted neighbourhood and its comparison set. Assessed value, not tax: the City's open data includes tax-exempt properties such as post-secondary campuses, hospitals and City-owned land without marking them, so tax can't be estimated reliably for non-residential property.</div><div id="txnonreschart"></div>`;
+    const nrRows = set.filter(m => pr(m.id).nonres_value_per_ha != null).map(m => ({ label: m.name, hl: m.id === hlId, parts: [{ v: pr(m.id).nonres_value_per_ha, color: css("--s4"), name: "Non-residential value per ha" }] }));
+    if (medNR != null) nrRows.push({ label: "Citywide median", parts: [{ v: medNR, color: css("--s-other"), name: "Citywide median" }] });
+    if (nrRows.length) hbars(document.getElementById("txnonreschart"), nrRows, v => v >= 1e6 ? "$" + d3.format(".1f")(v / 1e6) + "M" : "$" + d3.format(".0f")(v / 1e3) + "K", "Non-residential assessed value per hectare");
+    else document.getElementById("txnonreschart").innerHTML = `<div class="note">No finished non-residential property in this set.</div>`;
 
     const rows = TALL.filter(m => clsOk(m, txCls)).map(m => ({ n: m, p: pr(m.id), rank: rkT.get(m.id) }));
     rtable(document.getElementById("txrank"), TX_COLS, rows, txSt, renderTax);
@@ -1801,7 +1812,7 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
 
   // ---------- initial state
   let m0 = 0, nb0 = null, t0 = "map";
-  try { m0 = +(localStorage.getItem("egm-metric") || 0); nb0 = localStorage.getItem("egm-nb"); t0 = localStorage.getItem("egm-tab") || "map"; } catch (e) {}
+  try { m0 = +(localStorage.getItem("egm-metric") || 0); nb0 = localStorage.getItem("egm-nb");  } catch (e) {}
   const h = location.hash.slice(1); if (["map", "plans", "pace", "rankings", "density", "taxbase", "cmhc", "compare", "table", "faq"].includes(h)) t0 = h;
   msel.value = String(m0 < METRICS.length ? m0 : 0);
   paint();
