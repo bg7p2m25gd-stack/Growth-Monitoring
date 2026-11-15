@@ -92,6 +92,9 @@ and the tab says which areas were not refreshed.
 - **Typical values** are medians: houses = residential accounts on their own lot ("Lot:" in the legal
   description) with a building; condos = "Unit:" accounts worth at least $75,000, which leaves out parking
   stalls and storage units.
+- The **University of Alberta** neighbourhood is left out of density and tax figures: its student residences
+  are on the roll as rental buildings, but the census counts residence rooms as group living quarters, not
+  homes, and university residences are generally tax-exempt (`CAMPUS` in `build_parcels.py`).
 - The 2024 historical roll shows residential land dropping and recovering in many neighbourhoods, so it is
   left out of land trends.
 

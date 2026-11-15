@@ -1644,7 +1644,7 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
     dnEls.nb.value = txEls.nb.value = byId.get(hlId).name;
     const n = byId.get(hlId), p = pr(hlId), has = paOk(n);
     document.getElementById("dnmsg").hidden = has; document.getElementById("dnkpis").hidden = !has;
-    document.getElementById("dnmsg").innerHTML = has ? "" : `<b>${n.name}</b> has no density figures. It has under about 1 hectare of built residential land or fewer than 20 homes.`;
+    document.getElementById("dnmsg").innerHTML = has ? "" : (p && p.note === "campus" ? `<b>${n.name}</b> is left out. Its student residences are assessed as rental buildings, but the census counts residence rooms as group living quarters rather than homes, and university residences are generally exempt from property tax, so density figures here would be misleading.` : `<b>${n.name}</b> has no density figures. It has under about 1 hectare of built residential land or fewer than 20 homes.`);
     if (has) document.getElementById("dnkpis").innerHTML = [
       [fmt1(p.built_density), "Built density, homes per hectare"],
       [p.gross_density != null ? fmt1(p.gross_density) : "n/a", "Gross density, homes per hectare"],
@@ -1725,7 +1725,7 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
     dnEls.nb.value = txEls.nb.value = byId.get(hlId).name;
     const n = byId.get(hlId), p = pr(hlId), has = paTaxOk(n);
     document.getElementById("txmsg").hidden = has; document.getElementById("txkpis").hidden = !has;
-    document.getElementById("txmsg").innerHTML = has ? "" : `<b>${n.name}</b> has no tax figures. It has under about 1 hectare of built residential land or fewer than 20 homes.`;
+    document.getElementById("txmsg").innerHTML = has ? "" : (p && p.note === "campus" ? `<b>${n.name}</b> is left out. Its student residences are assessed as rental buildings, but the census counts residence rooms as group living quarters rather than homes, and university residences are generally exempt from property tax, so tax figures here would be misleading.` : `<b>${n.name}</b> has no tax figures. It has under about 1 hectare of built residential land or fewer than 20 homes.`);
     const vcell = k => { const v = p && p.values && p.values[PA.roll_year] && p.values[PA.roll_year][k]; return v && v[1] >= 10 ? "$" + fmt(v[0]) : "n/a"; };
     if (has) document.getElementById("txkpis").innerHTML = [
       [money0(p.res_tax_per_ha), "Residential municipal tax per hectare"],

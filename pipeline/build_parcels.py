@@ -45,6 +45,10 @@ RATE_CLASS = {"RESIDENTIAL": "Residential", "OTHER RESIDENTIAL": "Other Resident
 LEGACY_M2 = 20000
 CONDO_MIN_VALUE = 75000          # below this a "Unit" account is a parking stall or storage locker
 SAME_STAGE_YEARS = (5, 10, 15)
+# Campus neighbourhoods: student residences are on the roll as rental buildings, but the census counts their
+# rooms as group living quarters, not homes, and university residences are likely tax-exempt. Density and tax
+# figures there would be meaningless, so they are left out and marked.
+CAMPUS = {"UNIVERSITY OF ALBERTA"}
 UNRELIABLE_ROLLS = {"2024"}      # residential land in the 2024 historical roll drops and recovers in many neighbourhoods
 NAME_ALIASES = {"OLIVER": "WÎHKWÊNTÔWIN", "RAPPERSWIL": "RAPPERSWILL", "GLENRIDDING AREA": "GLENRIDDING HEIGHTS",
                 "TERWILLEGAR SOUTH": "SOUTH TERWILLEGAR", "RIVER VALLEY WINDEMERE": "RIVER VALLEY WINDERMERE"}
@@ -234,6 +238,10 @@ def main():
             "values": dict(sorted(values[nid].items())),
             "res_land_hist": {y: round(v, 2) for y, v in sorted(land_hist[nid].items()) if y not in UNRELIABLE_ROLLS},
         }
+        if n["key"] in CAMPUS:
+            for k in ("built_density", "net_density", "gross_density", "far", "res_tax_per_ha", "tax_per_home", "tax_per_ha"):
+                rec[k] = None
+            rec["note"] = "campus"
         # same-stage density: homes permitted by year X / residential land on the roll of year X+1
         fp = (n.get("first_permit") or {}).get("date")
         pre = (n.get("dwell") or {}).get("2016") or 0
