@@ -204,9 +204,12 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
 .pick { display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 10px; border: 1px solid var(--rule); border-radius: 999px; font-size: 13px; background: var(--panel); }
 .pick button { border: 0; background: none; cursor: pointer; color: var(--ink-3); padding: 0 6px; font-size: 15px; line-height: 1; }
 
-details.method { margin-top: 28px; background: var(--panel); border: 1px solid var(--rule); padding: 12px 16px; }
-details.method summary { cursor: pointer; font: 600 17px var(--f-display); }
-details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
+.faq h2 { font-size: 24px; margin-bottom: 4px; }
+.faq h3 { font-size: 18px; margin: 22px 0 8px; }
+.faq details { background: var(--panel); border: 1px solid var(--rule); padding: 10px 16px; margin-bottom: 8px; }
+.faq summary { cursor: pointer; font: 600 17px var(--f-display); }
+.faq details p { margin: 8px 0 2px; color: var(--ink-2); max-width: 90ch; }
+.faqlink { margin-top: 28px; font-size: 14px; }
 
 #tip { position: fixed; pointer-events: none; background: var(--panel); color: var(--ink); border: 1px solid var(--rule); box-shadow: 0 4px 16px rgb(0 0 0 / 0.14); padding: 8px 10px; font-size: 12.5px; border-radius: 4px; z-index: 10; max-width: 280px; }
 #tip b { font-family: var(--f-display); font-size: 15px; font-weight: 600; }
@@ -233,6 +236,7 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
     <button class="tab" role="tab" id="tab-cmhc" aria-selected="false" data-tab="cmhc">Housing starts (CMHC)</button>
     <button class="tab" role="tab" id="tab-compare" aria-selected="false" data-tab="compare">Compare</button>
     <button class="tab" role="tab" id="tab-table" aria-selected="false" data-tab="table">All neighbourhoods</button>
+    <button class="tab" role="tab" id="tab-faq" aria-selected="false" data-tab="faq">FAQ and sources</button>
   </div>
 
   <section id="panel-map">
@@ -371,21 +375,8 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
 
   <section id="panel-cmhc" hidden>
     <div class="explain">
-      <h2>Building permits and housing starts measure different things</h2>
-      <p class="note" style="margin:0 0 8px">The other tabs count units on City of Edmonton building permits. This tab uses CMHC housing starts. They describe the same building activity at different stages, with different rules, so they won't match in any given year. The CMHC figures cover the Edmonton region and its municipalities.</p>
-      <div style="overflow-x:auto"><table>
-        <thead><tr><th></th><th>City of Edmonton building permit</th><th>CMHC housing start</th></tr></thead>
-        <tbody>
-          <tr><td>What it is</td><td>Approval from the City to build. Issued before construction begins.</td><td>Confirmation that construction has begun: usually when concrete is poured for the whole footing around the building.</td></tr>
-          <tr><td>Who records it</td><td>The City's permit system, when the permit is issued.</td><td>CMHC's Starts and Completions Survey, through site visits by enumerators.</td></tr>
-          <tr><td>Timing</td><td>Counted on the issue date. A building appears here first, and some permits are never built or are re-issued.</td><td>Counted in the month construction starts, often months after the permit. A large building is a single start for all its units.</td></tr>
-          <tr><td>What counts as a unit</td><td>The change in dwelling units on the permit, including secondary suites, garden suites and office-to-residential conversions.</td><td>New self-contained units on new permanent foundations. Renovations and alterations inside existing buildings are excluded, so suites added to existing homes and conversions are not starts. Nursing homes, hotels and lodging houses are excluded too.</td></tr>
-          <tr><td>Housing types</td><td>The City's building-type labels. Stacked and "multi-unit" townhouses are often filed as row houses.</td><td>Single, semi-detached, row (3 or more side-by-side units), and "apartment and other", which includes stacked townhouses, duplexes and triplexes.</td></tr>
-          <tr><td>Tenure</td><td>Not recorded.</td><td>Intended market: homeowner, rental, condo or co-op. "Rental" means built to be rented, regardless of who finances it (purpose-built rental).</td></tr>
-          <tr><td>Geography</td><td>Each permit's address, so by neighbourhood.</td><td>The Edmonton region (CMA) and each of its municipalities on this tab; not by neighbourhood.</td></tr>
-        </tbody>
-      </table></div>
-      <p class="bottom">Use permits to see where, and what, the City is approving. Use starts to see what construction actually began and who it is being built for. Over several years the two move together; in a single year, timing and definitions keep them apart.</p>
+      <h2>Starts are not permits</h2>
+      <p class="bottom" style="margin:0">The other tabs count homes on City of Edmonton building permits, which are approvals to build. This tab uses CMHC housing starts, which are counted when construction begins and follow CMHC's own rules. The two won't match in any given year. <a href="#faq" data-goto="faq">See the FAQ for the full comparison.</a></p>
     </div>
 
     <div class="controls">
@@ -475,10 +466,46 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
     <div class="tablewrap" style="max-height:70vh"><table id="nbtable"></table></div>
   </section>
 
-  <details class="method">
-    <summary>Sources and method</summary>
-    <ul id="method"></ul>
-  </details>
+  <section id="panel-faq" class="faq" hidden>
+    <h2>Frequently asked questions</h2>
+    <p class="note" style="margin:0 0 14px">What the numbers on this site mean, how they are calculated and where they come from.</p>
+
+    <h3>Permits and housing starts</h3>
+    <details open id="faq-starts">
+      <summary>What is the difference between a building permit and a housing start?</summary>
+      <p>Most tabs count homes on City of Edmonton building permits. The Housing starts tab uses CMHC housing starts. They describe the same building activity at different stages, with different rules.</p>
+      <div class="explain" style="margin:10px 0 0"><div style="overflow-x:auto"><table>
+        <thead><tr><th></th><th>City of Edmonton building permit</th><th>CMHC housing start</th></tr></thead>
+        <tbody>
+          <tr><td>What it is</td><td>Approval from the City to build. Issued before construction begins.</td><td>Confirmation that construction has begun: usually when concrete is poured for the whole footing around the building.</td></tr>
+          <tr><td>Who records it</td><td>The City's permit system, when the permit is issued.</td><td>CMHC's Starts and Completions Survey, through site visits by enumerators.</td></tr>
+          <tr><td>Timing</td><td>Counted on the issue date. A building appears here first, and some permits are never built or are re-issued.</td><td>Counted in the month construction starts, often months after the permit. A large building is a single start for all its units.</td></tr>
+          <tr><td>What counts as a unit</td><td>The change in dwelling units on the permit, including secondary suites, garden suites and office-to-residential conversions.</td><td>New self-contained units on new permanent foundations. Renovations and alterations inside existing buildings are excluded, so suites added to existing homes and conversions are not starts. Nursing homes, hotels and lodging houses are excluded too.</td></tr>
+          <tr><td>Housing types</td><td>The City's building-type labels. Stacked and "multi-unit" townhouses are often filed as row houses.</td><td>Single, semi-detached, row (3 or more side-by-side units), and "apartment and other", which includes stacked townhouses, duplexes and triplexes.</td></tr>
+          <tr><td>Tenure</td><td>Not recorded.</td><td>Intended market: homeowner, rental, condo or co-op. "Rental" means built to be rented, regardless of who finances it (purpose-built rental).</td></tr>
+          <tr><td>Geography</td><td>Each permit's address, so by neighbourhood.</td><td>The Edmonton region (CMA) and each of its municipalities on this tab; not by neighbourhood.</td></tr>
+        </tbody>
+      </table></div></div>
+    </details>
+    <details>
+      <summary>Why don't the permit and start numbers match?</summary>
+      <p>Use permits to see where, and what, the City is approving. Use starts to see what construction actually began and who it is being built for. Over several years the two move together; in a single year, timing and definitions keep them apart.</p>
+    </details>
+    <details>
+      <summary>What counts as a purpose-built rental?</summary>
+      <p>CMHC records the intended market of every start: homeowner, rental, condo or co-op. "Rental" means the home was built to be rented, regardless of who finances it. A condo unit that an owner later rents out is still counted as condo. Building permits don't record tenure, so purpose-built rental figures are only on the Housing starts tab.</p>
+    </details>
+
+    <h3>Sources and method</h3>
+    <div id="method"></div>
+
+    <h3>Updates</h3>
+    <details>
+      <summary>How often is the site updated?</summary>
+      <p>Every Monday the site automatically pulls the latest City of Edmonton open data and CMHC figures. CMHC publishes its figures monthly. If CMHC can't be reached, the previous week's figures stay in place until the next update.</p>
+    </details>
+  </section>
+  <p class="faqlink"><a href="#faq" data-goto="faq">Sources, method and FAQ</a></p>
 </div>
 <div id="tip" hidden></div>
 
@@ -545,11 +572,11 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
     [fmt(remaining), `Units left to build in ${tracked.length} approved neighbourhood plans`],
   ].map(([v, l]) => `<div class="kpi"><small>${l}</small><b>${v}</b></div>`).join("");
 
-  // ---------- tabs (deep link with #map / #plans / #compare / #table)
+  // ---------- tabs (deep link with #map / #plans / #compare / #table / #faq)
   const tabs = [...document.querySelectorAll(".tab")];
   function setTab(t) {
     tabs.forEach(b => b.setAttribute("aria-selected", b.dataset.tab === t));
-    ["map", "plans", "pace", "rankings", "cmhc", "compare", "table"].forEach(k => document.getElementById("panel-" + k).hidden = k !== t);
+    ["map", "plans", "pace", "rankings", "cmhc", "compare", "table", "faq"].forEach(k => document.getElementById("panel-" + k).hidden = k !== t);
     try { localStorage.setItem("egm-tab", t); } catch (e) {}
     if (t === "compare") renderCompare();
     if (t === "pace") renderPace();
@@ -1324,6 +1351,19 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
 
   // ---------- method
   const S = D.sources;
+  const FAQ_Q = [
+    "Where do the building permit numbers come from?",
+    "How is \"dwellings today\" estimated?",
+    "Which census figures are used?",
+    "What do the assessment figures show?",
+    "How is plan build-out measured?",
+    "How are redevelopment plans measured?",
+    "How is build-out pace measured?",
+    "How are homes counted and sorted by housing type?",
+    "Where do the housing starts numbers come from?",
+    "What does \"denser than plan\" mean?",
+    "What do Developing, Redeveloping and Industrial mean?",
+  ];
   document.getElementById("method").innerHTML = [
     `<b>Building permits</b> (<a href="${S.building_permits}" target="_blank" rel="noopener">General Building Permits</a>, 2009 onward): every permit that adds or removes dwelling units, placed in neighbourhoods and plan areas by its coordinates. "Net units" subtracts units removed by demolitions. Permits are issued approvals, not completions, and large apartment projects can appear in the year the permit was issued.`,
     `<b>Dwellings today</b> = occupied private dwellings in the 2021 federal census plus net units permitted since the census (about 60% of 2021 permits, then all later years). It slightly overstates dwellings because recent permits may not be finished yet.`,
@@ -1336,12 +1376,13 @@ details.method li { margin-bottom: 6px; color: var(--ink-2); max-width: 90ch; }
     `<b>Housing starts (CMHC tab)</b>: CMHC Starts and Completions Survey, retrieved weekly from CMHC's Housing Market Information Portal for the Edmonton region (CMA), the City of Edmonton and 13 other municipalities individually (census subdivisions), with the remaining small municipalities combined, by dwelling type and intended market. Definitions follow <a href="https://www.cmhc-schl.gc.ca/professionals/housing-markets-data-and-research/housing-research/surveys/methods/methodologies-starts-completions-market-absorption-survey" target="_blank" rel="noopener">CMHC's survey methodology</a>. Used under the CMHC Licence Agreement for the Use of Data.`,
     `<b>Mix vs plan</b> compares the plan's low-density (single/semi-detached) share of units with the share of units actually permitted in the plan area since 2015. More than 10 points below plan is flagged "denser than plan"; more than 10 points above, "less dense than plan".`,
     `<b>Classification</b> (Developing / Redeveloping / Industrial) comes from the City's neighbourhood classification on development permits. Redeveloping covers mature and established neighbourhoods.`,
-  ].map(t => `<li>${t}</li>`).join("");
+  ].map((t, i) => `<details><summary>${FAQ_Q[i]}</summary><p>${t}</p></details>`).join("");
+  document.querySelectorAll("[data-goto]").forEach(a => a.addEventListener("click", e => { e.preventDefault(); setTab(a.dataset.goto); history.replaceState(null, "", "#" + a.dataset.goto); document.querySelector(".tabs").scrollIntoView(); }));
 
   // ---------- initial state
   let m0 = 0, nb0 = null, t0 = "map";
   try { m0 = +(localStorage.getItem("egm-metric") || 0); nb0 = localStorage.getItem("egm-nb"); t0 = localStorage.getItem("egm-tab") || "map"; } catch (e) {}
-  const h = location.hash.slice(1); if (["map", "plans", "pace", "rankings", "cmhc", "compare", "table"].includes(h)) t0 = h;
+  const h = location.hash.slice(1); if (["map", "plans", "pace", "rankings", "cmhc", "compare", "table", "faq"].includes(h)) t0 = h;
   msel.value = String(m0 < METRICS.length ? m0 : 0);
   paint();
   select(nb0 && byId.has(nb0) ? nb0 : nameToId.get("the orchards at ellerslie") || nbs[0].id);
