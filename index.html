@@ -1556,6 +1556,28 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
     });
   }
 
+  // paired horizontal bars: one label per row, two thin bars (a above b), values at the bar ends
+  function hpairs(el, rows, series, tf, aria) {
+    const W = 420, bh = 12, rh = 2 * bh + 18, m = { t: 4, r: 46, b: 4, l: 150 }, H = m.t + m.b + rows.length * rh;
+    const x = d3.scaleLinear().domain([0, d3.max(rows, r => Math.max(r.a || 0, r.b || 0)) || 1]).range([m.l, W - m.r]);
+    const s = d3.select(el).html("").append("svg").attr("viewBox", `0 0 ${W} ${H}`).attr("role", "img").attr("aria-label", aria);
+    rows.forEach((r, i) => {
+      const y0 = m.t + i * rh, g = s.append("g");
+      if (i) g.append("line").attr("x1", 0).attr("x2", W).attr("y1", y0).attr("y2", y0).attr("stroke", css("--rule-2"));
+      if (r.hl) g.append("rect").attr("x", 0).attr("y", y0 + 6).attr("width", 3).attr("height", rh - 12).attr("fill", css("--s3"));
+      g.append("text").attr("x", 9).attr("y", y0 + rh / 2 + 4).attr("style", `fill:${css(r.hl ? "--ink" : "--ink-2")};font:${r.hl ? 700 : 400} 14px var(--f-body)`).text(r.label);
+      [r.a, r.b].forEach((v, k) => {
+        const y = y0 + 7 + k * (bh + 2);
+        if (v == null) return;
+        g.append("rect").attr("x", m.l).attr("y", y).attr("width", Math.max(1, x(v) - m.l)).attr("height", bh).attr("fill", series[k][1]);
+        g.append("text").attr("x", x(v) + 5).attr("y", y + bh - 2).attr("style", `fill:${css("--ink-2")};font:12px var(--f-data)`).text(tf(v));
+      });
+      g.append("rect").attr("x", 0).attr("y", y0).attr("width", W).attr("height", rh).attr("fill", "transparent")
+        .on("mousemove", e => showTip(e, `<b>${r.label}</b>` + series.map((q, k) => `<div class="r"><span><i class="sw" style="background:${q[1]}"></i>${q[0]}</span><span>${[r.a, r.b][k] == null ? "n/a" : tf([r.a, r.b][k])}</span></div>`).join("")))
+        .on("mouseleave", hideTip);
+    });
+  }
+
   function renderDensity() {
     if (!PR) return;
     dnEls.nb.value = txEls.nb.value = byId.get(hlId).name;
@@ -1575,10 +1597,8 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
 
     const set = [hlId, ...DN_REFS.filter(i => i !== hlId)].map(i => byId.get(i)).filter(paOk);
     document.getElementById("dnbars").innerHTML = "";
-    barChart(document.getElementById("dnbars"), set.map(m => m.name), [
-      { key: "built", label: "Built density", color: css("--s1"), values: set.map(bdOf) },
-      { key: "gross", label: "Gross density", color: css("--s-other"), values: set.map(m => pr(m.id).gross_density) },
-    ], { grouped: true, w: innerWidth < 600 ? 400 : 520, h: 260, xlab: innerWidth < 600 ? (c => c.length > 8 ? c.slice(0, 7) + "…" : c) : shortName, tf: fmt1, aria: "Built density and gross density, homes per hectare" });
+    hpairs(document.getElementById("dnbars"), set.map(m => ({ label: m.name, hl: m.id === hlId, a: bdOf(m), b: pr(m.id).gross_density })),
+      [["Built density", css("--s1")], ["Gross density", css("--s-other")]], fmt1, "Built density and gross density, homes per hectare");
     if (!has) document.getElementById("dnbars").insertAdjacentHTML("beforeend", noData(n));
 
     // land composition
