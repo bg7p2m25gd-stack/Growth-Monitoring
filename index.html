@@ -1500,7 +1500,7 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
   const ord = k => k + (["th", "st", "nd", "rd"][(k % 100 > 10 && k % 100 < 14) ? 0 : (k % 10 < 4 ? k % 10 : 0)]);
   const shortName = s => s.length > 18 ? s.slice(0, 17) + "…" : s;
   const money0 = v => v == null ? "n/a" : "$" + fmt(v);
-  const DN_REFS = ["Wîhkwêntôwin", "Westmount", "Griesbach", "Summerside", "Glenridding Heights"].map(s => nameToId.get(s.toLowerCase())).filter(Boolean);
+  const DN_REFS = ["Wîhkwêntôwin", "Westmount", "Griesbach", "Summerside", "Keswick"].map(s => nameToId.get(s.toLowerCase())).filter(Boolean);
   const CLS_OPTS = ["dr", "Developing", "Redeveloping", "all"];
   let hlId = nameToId.get("blatchford area") || nbs[0].id, dnCls = "dr", txCls = "dr";
   try { const s = JSON.parse(localStorage.getItem("egm-dens") || "null"); if (s) { if (byId.has(s[0])) hlId = s[0]; if (CLS_OPTS.includes(s[1])) dnCls = s[1]; if (CLS_OPTS.includes(s[2])) txCls = s[2]; } } catch (e) {}
@@ -1533,7 +1533,7 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
     else if (refMode === "near") { const c0 = CENT.get(String(hlId)); r = c0 ? { ids: pool.filter(m => CENT.has(String(m.id))).sort((a, b) => d3.geoDistance(CENT.get(String(a.id)), c0) - d3.geoDistance(CENT.get(String(b.id)), c0)).slice(0, 5).map(m => m.id), desc: `The five neighbourhoods closest to ${nm}, measured centre to centre.` } : { ids: DN_REFS, desc: "Location not available; showing the reference set." }; }
     else if (refMode === "top") r = { ids: pool.slice().sort((a, b) => metric(b) - metric(a)).slice(0, 5).map(m => m.id), desc: `The five highest neighbourhoods in the city on this tab's headline measure.` };
     else if (refMode === "custom") r = { ids: customIds.filter(i => i !== hlId), desc: customIds.length ? "Your own selection." : "Add neighbourhoods to compare with." };
-    else r = { ids: DN_REFS.filter(i => i !== hlId), desc: "Reference set: Wîhkwêntôwin (downtown-edge high-rise), Westmount (mature), Griesbach (large redevelopment), Summerside (finished suburb) and Glenridding Heights (recent suburb)." };
+    else r = { ids: DN_REFS.filter(i => i !== hlId), desc: "Reference set: Wîhkwêntôwin (downtown-edge high-rise), Westmount (mature), Griesbach (large redevelopment), Summerside (finished suburb) and Keswick (recent suburb)." };
     if (refMode !== "ref" && refMode !== "custom") r.desc += cls === "all" ? "" : " Follows the neighbourhood filter.";
     return r;
   }
