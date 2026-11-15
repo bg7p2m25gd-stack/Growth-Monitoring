@@ -14,7 +14,7 @@ buildout targets in approved statutory plans (NSPs / NASPs).
 - `pipeline/first_permit_overrides.json` — hand-checked first-permit dates where the automatic rule is
   fooled by houses on old acreages (currently Horse Hill ASP and Marquis NSP).
 - `pipeline/build_cmhc.py` — fetches CMHC housing starts, completions and units under construction (City of
-  Edmonton and Edmonton CMA, monthly from 2009, by dwelling type and intended market) into `data/cmhc.json`.
+  Edmonton, the Edmonton CMA and 13 other municipalities, monthly from 2009, by dwelling type and intended market) into `data/cmhc.json`.
 - `pipeline/extract_plan_text.py`, `pipeline/render_pages.py` — helpers for reading plan PDFs.
 - `refresh.sh` — re-pulls all data.
 
@@ -65,6 +65,9 @@ buildings (so suites added to existing homes and office conversions are not star
 townhouses, duplexes and triplexes as "apartment and other", and record the intended market (homeowner,
 rental, condo, co-op). "Rental" = purpose-built rental. CMHC has not published Edmonton completions or units
 under construction for January 2023 to June 2025; those months are shown as gaps.
+The data now covers 14 municipalities individually (the City of Edmonton plus 13 others) and an "other" group, which is
+the region total minus those 14. If a fetch for a smaller municipality fails, its previous figures are carried forward
+and the tab says which areas were not refreshed.
 
 ## Data sources (data.edmonton.ca)
 General Building Permits (24uj-dj8v), Development Permits (2ccn-pwtu), Property Assessment current
