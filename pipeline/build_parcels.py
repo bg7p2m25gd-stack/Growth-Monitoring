@@ -41,7 +41,13 @@ BASE = "https://data.edmonton.ca/resource/"
 DS = {"current": "q7d6-ambg", "info": "dkk9-cj3x", "historical": "qi6a-xuwt", "tax": "pwis-wc4c"}
 SOURCES = {k: f"https://data.edmonton.ca/d/{v}" for k, v in DS.items()}
 RATE_CLASS = {"RESIDENTIAL": "Residential", "OTHER RESIDENTIAL": "Other Residential", "COMMERCIAL": "Non Residential",
-              "MA DERELICT RESIDENTIAL": "Mature Area Derelict Residential", "FARMLAND": "Farmland"}
+              "MA DERELICT RESIDENTIAL": "Mature Area Derelict Residential", "DERELICT RESIDENTIAL": "Mature Area Derelict Residential",
+              "DESIGNATED IND PROPERTIES": "Non Residential", "NONRES MUNICIPAL/RES EDUCATION": "Non Residential", "FARMLAND": "Farmland"}
+RES_CLASSES = ("RESIDENTIAL", "MA DERELICT RESIDENTIAL", "DERELICT RESIDENTIAL")
+
+
+def bucket(cls):
+    return "res" if cls in RES_CLASSES else "rental" if cls == "OTHER RESIDENTIAL" else "farm" if cls == "FARMLAND" else "nonres"
 LEGACY_M2 = 20000
 CONDO_MIN_VALUE = 75000          # below this a "Unit" account is a parking stall or storage locker
 SAME_STAGE_YEARS = (5, 10, 15)
@@ -107,7 +113,7 @@ def main():
         rate_year = roll_year if roll_year in rates_all else max(rates_all)
         rates = rates_all[rate_year]
         print("Current roll")
-        cur = get_all("current", {"$select": "account_number, neighbourhood_id, mill_class_1, assessed_value, latitude, longitude"})
+        cur = get_all("current", {"$select": "account_number, neighbourhood_id, mill_class_1, mill_class_2, mill_class_3, tax_class_pct_1, tax_class_pct_2, tax_class_pct_3, assessed_value, latitude, longitude"})
         print(f"  {len(cur)} accounts\nProperty information")
         info = get_all("info", {"$select": "account_number, lot_size, total_gross_area, year_built, legal_description"})
         print(f"  {len(info)} accounts\nHistorical land and values")
@@ -162,12 +168,20 @@ def main():
         cls, v, lot = r.get("mill_class_1") or "", f(r.get("assessed_value")), f(p.get("lot_size"))
         legal = p.get("legal_description") or ""
         built = bool(p.get("year_built"))
-        t = v * rates.get(RATE_CLASS.get(cls, ""), 0)
+        # mixed-class accounts: split the value by each class's percentage before applying its rate
+        parts = [(r.get(f"mill_class_{k}"), f(r.get(f"tax_class_pct_{k}"))) for k in (1, 2, 3) if r.get(f"mill_class_{k}")]
+        if not parts or sum(pc for _, pc in parts) <= 0:
+            parts = [(cls, 100.0)]
+        share = sum(pc for _, pc in parts)
+        tparts = defaultdict(float)
+        for c, pc in parts:
+            tparts[bucket(c)] += v * pc / share * rates.get(RATE_CLASS.get(c, ""), 0)
+        t = sum(tparts.values())
         if "Plan:" not in legal and lot > LEGACY_M2:
             land[nid]["legacy"] += lot
             vac_tax[nid] += t
             continue
-        if cls in ("RESIDENTIAL", "MA DERELICT RESIDENTIAL"):
+        if cls in RES_CLASSES:
             cat = "res_built" if built else "res_unbuilt"
         elif cls == "OTHER RESIDENTIAL":
             cat = "rental_built" if built else "rental_unbuilt"
@@ -179,7 +193,9 @@ def main():
         if cat == "nonres_built":
             nonres_v[nid] += v
         if built and cat != "farmland":
-            tax[nid][cat.replace("_built", "")] += t
+            for b, tv in tparts.items():
+                if b != "farm":
+                    tax[nid][b] += tv
             floor[nid][cat] += f(p.get("total_gross_area"))
         else:
             vac_tax[nid] += t
@@ -211,6 +227,8 @@ def main():
             continue
         assessed = sum(L.values())
         L["unassessed"] = round(max(n["area_ha"] - assessed, 0), 2)
+        # land on the roll can't exceed the neighbourhood; where it does, the source lot sizes are wrong
+        land_error = assessed > n["area_ha"] * 1.05
         homes = None
         if n.get("dwell_est_now") is not None:
             pending = sum(max((n["permits"].get(str(y)) or {}).get("units", 0) - (n["permits"].get(str(y)) or {}).get("occ", 0), 0)
@@ -238,6 +256,10 @@ def main():
             "values": dict(sorted(values[nid].items())),
             "res_land_hist": {y: round(v, 2) for y, v in sorted(land_hist[nid].items()) if y not in UNRELIABLE_ROLLS},
         }
+        if land_error:
+            for k in ("built_density", "net_density", "gross_density", "far", "res_tax_per_ha", "tax_per_home", "tax_per_ha", "nonres_value_per_ha"):
+                rec[k] = None
+            rec["note"] = "land_error"
         if n["key"] in CAMPUS:
             for k in ("built_density", "net_density", "gross_density", "far", "res_tax_per_ha", "tax_per_home", "tax_per_ha"):
                 rec[k] = None

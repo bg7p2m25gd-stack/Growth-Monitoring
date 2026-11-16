@@ -74,23 +74,34 @@ and the tab says which areas were not refreshed.
 
 ## Density and tax base
 - **Land** comes from lot sizes on the assessment roll (square metres). Condo units each carry their share of
-  the parcel, so lot sizes add up without double counting. Tax-exempt land such as roads, parks and schools
-  is not on the roll.
+  the parcel, so lot sizes normally add up without double counting. Tax-exempt land such as roads, parks and
+  schools is not on the roll. Land is assigned by an account's first class; derelict residential counts as
+  residential. Where a neighbourhood's land on the roll exceeds its area by more than 5%, the source lot sizes
+  are wrong and its density and tax figures are left out (`note: "land_error"`; currently Pembina, where four
+  condo plans carry lot sizes that rise by 2 m² per unit).
 - An account with **no year built** has no finished building (an empty lot or one under construction).
-- **Unsubdivided parcels** (no registered plan in the legal description and larger than 2 ha) are kept
+- **Unsubdivided parcels** (no registered plan in the legal description, including a blank one, and larger
+  than 2 ha, in any class) are kept
   separate: one old title can hold a few buildings on a large area of undeveloped land (e.g. Griesbach).
 - Accounts with no neighbourhood ID on the roll (e.g. "CHAPPELLE AREA") are placed by their coordinates.
 - **Homes** for density are homes in finished buildings: estimated dwellings now minus units on permits from
-  the last three years that have no occupancy date yet (occupancy dates are recorded for most permits from
+  the current year and the two before it that have no occupancy date yet (occupancy dates are recorded for most permits from
   2021). Older permits are assumed finished.
 - **Built density** = those homes ÷ residential land (homes and rental buildings) with a finished building.
   **Gross density** = homes ÷ the whole neighbourhood.
 - **Municipal tax** = assessed value × the City's municipal rate for the class (education tax excluded).
+  Mixed-class accounts are split by their class percentages first. Tax is counted only for accounts with a
+  finished building, so it matches the land and homes it is divided by; tax on vacant, under-construction and
+  unsubdivided land is kept separately (`tax_unbuilt`) and not shown.
+  **Residential tax per hectare** = residential + rental tax ÷ hectares of finished residential land;
+  **tax per home** = the same tax ÷ homes in finished buildings. **Floor area ratio** = private floor area of
+  finished residential buildings ÷ their land. Measures are left blank where the land they divide by is under
+  1 ha or there are fewer than 20 homes.
   Only residential and "other residential" (rental buildings of 4+ units) tax is shown. The open roll
   includes tax-exempt institutions (e.g. NAIT, 11762 106 St, assessed as commercial) without flagging them,
   so non-residential property is shown as assessed value per hectare, not tax.
 - **Typical values** are medians: houses = residential accounts on their own lot ("Lot:" in the legal
-  description) with a building; condos = "Unit:" accounts worth at least $75,000, which leaves out parking
+  description) with a building; condos = residential-class "Unit:" accounts worth at least $75,000, which leaves out parking
   stalls and storage units.
 - The **University of Alberta** neighbourhood is left out of density and tax figures: its student residences
   are on the roll as rental buildings, but the census counts residence rooms as group living quarters, not
