@@ -15,6 +15,8 @@ buildout targets in approved statutory plans (NSPs / NASPs).
   fooled by houses on old acreages (currently Horse Hill ASP and Marquis NSP).
 - `pipeline/build_cmhc.py` — fetches CMHC housing starts, completions and units under construction (City of
   Edmonton, the Edmonton CMA and 13 other municipalities, monthly from 2009, by dwelling type and intended market) into `data/cmhc.json`.
+- `pipeline/build_region.py` — writes `data/region.geojson`, the municipal boundaries (Statistics Canada 2021
+  census subdivisions) for the regional map on the CMHC tab. Run by hand after a new census; not part of the weekly refresh.
 - `pipeline/build_parcels.py` — joins the current assessment roll to Property Information by account number
   and writes `data/parcels.json` for the Density and Tax base tabs. Runs after `build_data.py` (it reads
   `data/growth.json`).
