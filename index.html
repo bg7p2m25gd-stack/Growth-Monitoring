@@ -183,8 +183,11 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
 .kpis.cm { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 4px; }
 @media (max-width: 900px) { .kpis.cm { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .chart h3 { font-size: 18px; margin-bottom: 2px; }
-.rankgrid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
-@media (max-width: 1350px) { .rankgrid { grid-template-columns: minmax(0, 1fr); } }
+.rankgrid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); grid-template-areas: "hl hr" "tl tr"; gap: 0 20px; align-items: stretch; }
+.rankgrid > .tablehead { margin-block: 0 8px; }
+.rk-hl { grid-area: hl; } .rk-hr { grid-area: hr; } .rk-tl { grid-area: tl; } .rk-tr { grid-area: tr; }
+.rankgrid > .tablewrap { overflow-y: auto; }
+@media (max-width: 1350px) { .rankgrid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "hl" "tl" "hr" "tr"; } .rk-hr { margin-top: 22px !important; } }
 .leader { display: block; white-space: nowrap; }
 .leader small { color: var(--ink-3); font-family: var(--f-data); font-size: 11.5px; }
 #ranktable td.rk { color: var(--ink-3); font-family: var(--f-data); width: 3ch; }
@@ -294,13 +297,13 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
 
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" id="tab-map" aria-selected="true" data-tab="map">Neighbourhood map</button>
-    <button class="tab" role="tab" id="tab-plans" aria-selected="false" data-tab="plans">Plan buildout</button>
-    <button class="tab" role="tab" id="tab-pace" aria-selected="false" data-tab="pace">Build-out pace</button>
     <button class="tab" role="tab" id="tab-rankings" aria-selected="false" data-tab="rankings">Rankings</button>
-    <button class="tab" role="tab" id="tab-density" aria-selected="false" data-tab="density">Density</button>
     <button class="tab" role="tab" id="tab-taxbase" aria-selected="false" data-tab="taxbase">Tax base</button>
+    <button class="tab" role="tab" id="tab-density" aria-selected="false" data-tab="density">Density</button>
     <button class="tab" role="tab" id="tab-compare" aria-selected="false" data-tab="compare">Compare</button>
     <button class="tab" role="tab" id="tab-cmhc" aria-selected="false" data-tab="cmhc">Housing starts (CMHC)</button>
+    <button class="tab" role="tab" id="tab-plans" aria-selected="false" data-tab="plans">Plan buildout</button>
+    <button class="tab" role="tab" id="tab-pace" aria-selected="false" data-tab="pace">Build-out pace</button>
     <button class="tab" role="tab" id="tab-table" aria-selected="false" data-tab="table">All neighbourhoods</button>
     <button class="tab" role="tab" id="tab-faq" aria-selected="false" data-tab="faq">FAQ and sources</button>
   </div>
@@ -421,11 +424,10 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
     </div>
     <div class="callout" id="rkcallout"></div>
     <div class="rankgrid">
-      <div class="tablewrap"><table id="ranktable"></table></div>
-      <div>
-        <div class="tablehead" style="margin-top:0"><div><h2 id="leadtitle">Leaders by year</h2><div class="note">Top neighbourhoods each year for the selected type, with their share of the city total that year. Click a year to rank it.</div></div></div>
-        <div class="tablewrap"><table id="leadtable"></table></div>
-      </div>
+      <div class="tablehead rk-hl"><div><h2 id="ranktitle">Ranking</h2><div class="note">Neighbourhoods ranked by units permitted in the selected period. Click a neighbourhood to see its contribution by year below.</div></div></div>
+      <div class="tablehead rk-hr"><div><h2 id="leadtitle">Leaders by year</h2><div class="note">Top neighbourhoods each year for the selected type, with their share of the city total that year. Click a year to rank it.</div></div></div>
+      <div class="tablewrap rk-tl" id="rankwrap"><table id="ranktable"></table></div>
+      <div class="tablewrap rk-tr" id="leadwrap"><table id="leadtable"></table></div>
     </div>
 
     <div class="tablehead"><div><h2 id="contribtitle">Neighbourhood contribution by year</h2><div class="note">Units the neighbourhood was permitted each year, and its share of the city-wide total for that housing type that year. The last column is its share of all new units in the city. Click a neighbourhood in the ranking to show it here.</div></div></div>
@@ -1429,6 +1431,7 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
     renderContrib();
 
     // leaders by year
+    document.getElementById("ranktitle").textContent = `${typeLabel(k)}: ranking, ${periodLabel()}`;
     document.getElementById("leadtitle").textContent = `${typeLabel(k)}: leaders by year`;
     const years = d3.range(CY, 2008, -1).map(String);
     document.getElementById("leadtable").innerHTML = `<thead><tr><th>Year</th><th class="n">City total</th><th>1st</th><th>2nd</th><th>3rd</th><th class="n">Top 3 share</th></tr></thead><tbody>` +
@@ -1439,7 +1442,17 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
         return `<tr data-y="${y}"${y === rkYear.value ? ' style="background:var(--rule-2)"' : ""}><td class="mono">${y}${y === String(CY) ? "*" : ""}</td><td class="n">${fmt(tot)}</td>${cell(lead[0])}${cell(lead[1])}${cell(lead[2])}<td class="n">${tot ? d3.format(".0%")(d3.sum(lead, r => r.v) / tot) : "–"}</td></tr>`;
       }).join("") + `</tbody>`;
     document.querySelectorAll("#leadtable tbody tr").forEach(tr => tr.addEventListener("click", () => { rkYear.value = tr.dataset.y; renderRankings(); }));
+    syncRankHeights();
   }
+  // side by side, the two tables share one height (the ranking's, at least 420px) and scroll inside it
+  function syncRankHeights() {
+    const l = document.getElementById("rankwrap"), r = document.getElementById("leadwrap");
+    l.style.height = r.style.height = "";
+    if (!matchMedia("(min-width: 1351px)").matches || !l.offsetParent) return;
+    const h = Math.min(Math.max(l.scrollHeight, 420), 1000) + "px";
+    l.style.height = r.style.height = h;
+  }
+  addEventListener("resize", () => { if (!document.getElementById("panel-rankings").hidden) syncRankHeights(); });
   [rkType, rkYear, rkSet, rkTop].forEach(el => el.addEventListener("change", renderRankings));
 
   // neighbourhood contribution by year
