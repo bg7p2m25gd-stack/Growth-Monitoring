@@ -4,65 +4,50 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Edmonton Growth Monitor</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&family=Orbitron:wght@800&display=swap">
+<script>try { document.documentElement.dataset.theme = localStorage.getItem("egm-theme") === "light" ? "light" : "dark"; } catch (e) { document.documentElement.dataset.theme = "dark"; }</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <style>
 /* Layout: a planning-office console. Header band with city totals, working tabs below.
    Brand palette: Aquamarine #85ffc7, Vibrant Coral #f87060, Dusty Olive #82846d, Dim Grey #646165,
    Midnight Violet #210124. Coral is the accent; violet anchors the header and ink; aquamarine highlights.
    Chart series and ramps are derived from the brand hues and validated for colour-blind separation. */
+/* Default is dark synthwave. Light mode (data-theme="light") keeps the site's earlier light palette. */
 :root {
-  --bg: #f6f4f7;
-  --panel: #ffffff;
-  --ink: #210124;            /* Midnight Violet */
-  --ink-2: #646165;          /* Dim Grey */
-  --ink-3: #6b6d57;          /* Dusty Olive, darkened for readable small text */
-  --rule: #e3dee4;
-  --rule-2: #f0edf1;
-  --accent: #f87060;         /* Vibrant Coral: marks, selection, highlights */
-  --link: #c8432f;           /* coral darkened for text on light surfaces */
-  --accent-soft: #85ffc7;    /* Aquamarine */
-  --on-aqua: #210124;
-  --band: #210124;           /* header band */
-  --band-ink: #ffffff;
-  --band-ink-2: #c9c1cc;
-  --band-accent: #85ffc7;
-  --nodata: #e8e4e9;
-  --map-line: #ffffff;
+  --bg: #12001a; --panel: #1d0a27; --panel-2: #26103a; --rule: #3f2152; --rule-2: #2c1440;
+  --ink: #f6f0fa; --ink-2: #cdbfd9; --ink-3: #a596b4;
+  --link: #85ffc7; --accent: #ff6ad5; --accent-soft: #85ffc7; --on-aqua: #12001a;
+  --nodata: #2c1a35; --map-line: #12001a;
+  --band-ink: #ffffff; --band-ink-2: #eadcf3; --band-accent: #85ffc7;
+  --magenta: #ff6ad5;
+  --glow-a: 0 0 6px rgba(133, 255, 199, 0.55); --glow-m: 0 0 8px rgba(255, 106, 213, 0.6);
 
-  --s1: #8a4fb0; --s2: #13a374; --s3: #f2604f; --s4: #3a78d0; --s5: #d6961a; --s-other: #82846d;
-  --seq-1: #efe6f2; --seq-2: #d9c3e1; --seq-3: #bb98cb; --seq-4: #9568ae; --seq-5: #6b3d88; --seq-6: #45205c; --seq-7: #210124;
-  --div-neg: #f2604f; --div-mid: #ece8ec;
-  --good: #13a374; --warn: #d6961a; --bad: #f2604f;
-  --good-ink: #0b6e4a; --bad-ink: #b93a28;
+  --s1: #40aa82; --s2: #8834e2; --s3: #e84313; --s4: #3286e9; --s5: #f03fb4; --s-other: #82846d;
+  --seq-1: #205943; --seq-2: #237356; --seq-3: #258e6a; --seq-4: #24ab7e; --seq-5: #37c695; --seq-6: #4ee6af; --seq-7: #92fed1;
+  --div-neg: #e84313; --div-mid: #3a2547;
+  --good: #85ffc7; --warn: #ffc65c; --bad: #ff8a78; --good-ink: #85ffc7; --bad-ink: #ff8a78;
 
+  --f-title: "Orbitron", var(--f-display);
   --f-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
   --f-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
   --f-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #210124; --panel: #2b0d30; --ink: #f4eff5; --ink-2: #c9c1cc; --ink-3: #ada4b0;
-    --rule: #48294d; --rule-2: #371a3c; --accent: #f87060; --link: #f87060; --accent-soft: #85ffc7; --on-aqua: #210124;
-    --band: #2b0d30; --band-ink: #ffffff; --band-ink-2: #c9c1cc; --band-accent: #85ffc7;
-    --nodata: #3b2440; --map-line: #210124;
-    --s1: #9a66c4; --s2: #1c9a6d; --s3: #e05a4a; --s4: #4580d4; --s5: #bd8719; --s-other: #82846d;
-    --seq-1: #1d3f3a; --seq-2: #1f5c4e; --seq-3: #237a63; --seq-4: #2c9a7a; --seq-5: #41ba92; --seq-6: #62dbab; --seq-7: #85ffc7;
-    --div-neg: #e05a4a; --div-mid: #45304a;
-    --good: #85ffc7; --warn: #bd8719; --bad: #f87060; --good-ink: #85ffc7; --bad-ink: #f87060;
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #210124; --panel: #2b0d30; --ink: #f4eff5; --ink-2: #c9c1cc; --ink-3: #ada4b0;
-  --rule: #48294d; --rule-2: #371a3c; --accent: #f87060; --link: #f87060; --accent-soft: #85ffc7; --on-aqua: #210124;
-  --band: #2b0d30; --band-ink: #ffffff; --band-ink-2: #c9c1cc; --band-accent: #85ffc7;
-  --nodata: #3b2440; --map-line: #210124;
-  --s1: #9a66c4; --s2: #1c9a6d; --s3: #e05a4a; --s4: #4580d4; --s5: #bd8719; --s-other: #82846d;
-  --seq-1: #1d3f3a; --seq-2: #1f5c4e; --seq-3: #237a63; --seq-4: #2c9a7a; --seq-5: #41ba92; --seq-6: #62dbab; --seq-7: #85ffc7;
-  --div-neg: #e05a4a; --div-mid: #45304a;
-  --good: #85ffc7; --warn: #bd8719; --bad: #f87060; --good-ink: #85ffc7; --bad-ink: #f87060;
   color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --bg: #f6f4f7; --panel: #ffffff; --panel-2: #f0edf1;
+  --ink: #210124;            /* Midnight Violet */
+  --ink-2: #646165;          /* Dim Grey */
+  --ink-3: #6b6d57;          /* Dusty Olive, darkened for readable small text */
+  --rule: #e3dee4; --rule-2: #f0edf1;
+  --accent: #f87060;         /* Vibrant Coral */
+  --link: #c8432f; --accent-soft: #85ffc7; --on-aqua: #210124;
+  --band-ink: #ffffff; --band-ink-2: #eadcf3; --band-accent: #85ffc7;
+  --nodata: #e8e4e9; --map-line: #ffffff;
+  --s1: #8a4fb0; --s2: #13a374; --s3: #f2604f; --s4: #3a78d0; --s5: #d6961a; --s-other: #82846d;
+  --seq-1: #efe6f2; --seq-2: #d9c3e1; --seq-3: #bb98cb; --seq-4: #9568ae; --seq-5: #6b3d88; --seq-6: #45205c; --seq-7: #210124;
+  --div-neg: #f2604f; --div-mid: #ece8ec;
+  --good: #13a374; --warn: #d6961a; --bad: #f2604f; --good-ink: #0b6e4a; --bad-ink: #b93a28;
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
@@ -75,12 +60,29 @@ a { color: var(--link); }
 button, select, input { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
 
-/* header */
-.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 32px; padding: 18px 22px 16px; background: var(--band); color: var(--band-ink); border-radius: 6px; border-bottom: 4px solid var(--accent); }
-.top h1 { font-size: 34px; line-height: 1; color: var(--band-ink); }
-.top h1 span { color: var(--band-accent); }
-.top .eyebrow { color: var(--band-ink-2); }
-.top .asof { color: var(--band-ink-2); font-size: 13px; }
+/* header: sunset band over a perspective grid (the brand, in both themes) */
+.top { position: relative; overflow: hidden; border: 1px solid #3f2152; border-radius: 10px; padding: 24px 24px 74px; background: linear-gradient(180deg, #24003a 0%, #3a0a52 45%, #6a1a6e 75%, #b8336f 100%); color: var(--band-ink); }
+.top .skyline { position: absolute; right: 2%; bottom: 58px; width: min(40%, 360px); height: auto; filter: drop-shadow(0 0 6px rgba(255, 106, 213, 0.55)); pointer-events: none; }
+.top .hgrid { position: absolute; left: -20%; right: -20%; bottom: -2px; height: 90px; transform: perspective(220px) rotateX(58deg); transform-origin: bottom; pointer-events: none;
+  background-image: linear-gradient(var(--magenta) 1px, transparent 1px), linear-gradient(90deg, var(--magenta) 1px, transparent 1px); background-size: 44px 22px; opacity: 0.55; }
+.top .hcopy { position: relative; z-index: 1; padding-right: 52px; }
+.top .eyebrow { font: 500 11px/1.2 var(--f-data); letter-spacing: 0.14em; color: var(--band-accent); }
+.top h1 { font: 800 clamp(22px, 4.2vw, 40px)/1.08 var(--f-title); letter-spacing: 0.04em; text-transform: uppercase; margin: 8px 0 6px; color: transparent;
+  background: linear-gradient(180deg, #ffffff 0%, #d9e9ff 48%, #8b7bb8 52%, #f2e6ff 100%); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 0 10px rgba(255, 106, 213, 0.45)); }
+.top h1 span { background: linear-gradient(180deg, #c8fff0, #85ffc7); -webkit-background-clip: text; background-clip: text; }
+.top .asof { color: var(--band-ink-2); font-size: 14px; }
+.top .asof .mono { color: var(--band-accent); }
+.lights { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; font: 500 11px var(--f-data); color: var(--band-ink-2); letter-spacing: 0.08em; text-transform: uppercase; align-items: center; }
+.light { display: inline-flex; align-items: center; gap: 6px; }
+.light i { width: 9px; height: 9px; border-radius: 50%; background: #7d6b8c; }
+.light.on i { background: #85ffc7; box-shadow: var(--glow-a); }
+.light.stale i { background: var(--warn); box-shadow: none; }
+.themebtn { position: absolute; top: 12px; right: 12px; z-index: 2; width: 34px; height: 34px; padding: 0; display: grid; place-items: center; border-radius: 50%; border: 1px solid rgba(133, 255, 199, 0.6); background: rgba(18, 0, 26, 0.45); color: #85ffc7; cursor: pointer; }
+.themebtn:hover { background: rgba(18, 0, 26, 0.7); }
+.themebtn:focus-visible { outline: 2px solid #85ffc7; outline-offset: 2px; }
+.themebtn svg { width: 18px; height: 18px; }
+@media (max-width: 900px) { .top .skyline { width: 46%; bottom: 40px; } }
+@media (max-width: 600px) { .top { padding: 20px 16px 64px; } .top .skyline { opacity: 0.45; width: 56%; bottom: 36px; right: 0; } .top .hcopy { padding-right: 40px; } }
 .kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); margin-block: 16px; }
 .kpi { background: var(--panel); padding: 12px 14px; min-width: 0; }
 .kpi b { display: block; font-size: 22px; font-weight: 500; margin-top: 4px; }
@@ -221,21 +223,73 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
 .landkey .num { font-size: 12px; color: var(--ink-3); text-align: right; }
 .landkey .sw { margin: 0; }
 
-#tip { position: fixed; pointer-events: none; background: var(--panel); color: var(--ink); border: 1px solid var(--rule); box-shadow: 0 4px 16px rgb(0 0 0 / 0.14); padding: 8px 10px; font-size: 12.5px; border-radius: 4px; z-index: 10; max-width: 280px; }
+#tip { position: fixed; pointer-events: none; background: var(--panel-2); color: var(--ink); border: 1px solid var(--rule); box-shadow: 0 4px 16px rgb(0 0 0 / 0.14); padding: 8px 10px; font-size: 12.5px; border-radius: 4px; z-index: 10; max-width: 280px; }
 #tip b { font-family: var(--f-display); font-size: 15px; font-weight: 600; }
 #tip .r { display: flex; justify-content: space-between; gap: 14px; font-family: var(--f-data); font-size: 12px; }
 .loading { padding: 40px; color: var(--ink-3); }
+
+/* ---- synthwave components (dark theme only; light mode keeps the earlier look) ---- */
+:root:not([data-theme="light"]) .kpis { gap: 12px; background: none; border: 0; }
+:root:not([data-theme="light"]) .kpi { position: relative; border: 1px solid var(--rule); border-radius: 8px; padding: 14px 14px 12px; }
+:root:not([data-theme="light"]) .kpi::before { content: ""; position: absolute; left: 14px; right: 14px; top: 0; height: 2px; border-radius: 2px; background: linear-gradient(90deg, var(--magenta), var(--accent-soft)); }
+:root:not([data-theme="light"]) .kpi small { display: block; font: 500 11px/1.3 var(--f-data); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+:root:not([data-theme="light"]) .kpi b { font-size: 24px; color: var(--accent-soft); margin-top: 6px; }
+:root:not([data-theme="light"]) .tabs { gap: 6px; padding: 4px; background: var(--panel); border: 1px solid var(--rule); border-radius: 999px; border-bottom: 1px solid var(--rule); scrollbar-width: thin; }
+:root:not([data-theme="light"]) .tab { flex: none; margin: 0; border: 1px solid transparent; border-radius: 999px; padding: 7px 14px; font-size: 16px; letter-spacing: 0.05em; text-transform: uppercase; }
+:root:not([data-theme="light"]) .tab[aria-selected="true"] { color: #12001a; background: var(--accent-soft); box-shadow: var(--glow-a); border-bottom-color: transparent; }
+:root:not([data-theme="light"]) h2, :root:not([data-theme="light"]) h3 { text-transform: uppercase; letter-spacing: 0.05em; }
+:root:not([data-theme="light"]) .card, :root:not([data-theme="light"]) .file, :root:not([data-theme="light"]) .mapbox, :root:not([data-theme="light"]) .tablewrap { border-radius: 10px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04); }
+:root:not([data-theme="light"]) .explain, :root:not([data-theme="light"]) .faq details { border-left: 3px solid var(--magenta); border-radius: 10px; background: linear-gradient(90deg, rgba(255, 106, 213, 0.10), transparent 60%), var(--panel); }
+:root:not([data-theme="light"]) .explain a, :root:not([data-theme="light"]) .faq details a { color: var(--accent-soft); }
+:root:not([data-theme="light"]) .faq summary { text-transform: none; }
+:root:not([data-theme="light"]) th { font: 500 11px var(--f-data); letter-spacing: 0.08em; }
+:root:not([data-theme="light"]) tbody tr:hover td { background: var(--panel-2); }
+:root:not([data-theme="light"]) .explain tbody tr:hover td { background: none; }
+:root:not([data-theme="light"]) select, :root:not([data-theme="light"]) input[type="search"] { background: var(--bg); border-radius: 6px; }
+:root:not([data-theme="light"]) select:focus-visible, :root:not([data-theme="light"]) input:focus-visible { outline: 2px solid var(--accent-soft); outline-offset: 1px; }
+:root:not([data-theme="light"]) .btn { background: transparent; border-color: var(--accent-soft); color: var(--accent-soft); border-radius: 6px; }
+:root:not([data-theme="light"]) .btn:hover { background: rgba(133, 255, 199, 0.12); border-color: var(--accent-soft); }
+:root:not([data-theme="light"]) #map path.nb.sel { stroke: var(--accent-soft); }
+:root:not([data-theme="light"]) .chart .grid line { stroke: var(--rule); stroke-dasharray: 2 4; }
+:root:not([data-theme="light"]) .pick { background: var(--panel-2); }
+:focus-visible { outline-color: var(--link); }
 @media (prefers-reduced-motion: no-preference) { .bar i, td .mini i { transition: width 0.4s ease; } }
 </style>
 
 <div class="wrap">
-  <div class="top">
-    <div>
+  <header class="top">
+    <svg class="skyline" viewBox="0 0 552 160" aria-hidden="true">
+<defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd36a"/><stop offset=".55" stop-color="#ff8a78"/><stop offset="1" stop-color="#ff6ad5"/></linearGradient>
+<pattern id="st" width="4" height="9" patternUnits="userSpaceOnUse"><rect width="4" height="6.5" fill="#fff"/></pattern>
+<mask id="sm"><rect width="552" height="160" fill="url(#st)"/></mask></defs>
+<g fill="url(#sg)" mask="url(#sm)" opacity=".9"><path d="M4 160 L24.0 120 L44 160 Z"/><path d="M34 160 L63.0 98 L92 160 Z"/><path d="M80 160 L102.0 116 L124 160 Z"/><path d="M112 160 L129.0 128 L146 160 Z"/><rect x="150" y="104" width="122" height="7"/><rect x="156" y="111" width="5" height="49"/><rect x="175" y="111" width="5" height="49"/><rect x="194" y="111" width="5" height="49"/><rect x="213" y="111" width="5" height="49"/><rect x="232" y="111" width="5" height="49"/><rect x="251" y="111" width="5" height="49"/><rect x="270" y="111" width="5" height="49"/><rect x="282" y="128" width="78" height="32"/><rect x="303" y="113" width="36" height="15"/><rect x="309" y="102" width="24" height="11"/><path d="M309 102 A12 13 0 0 1 333 102 Z"/><rect x="319" y="80" width="4" height="10"/><rect x="370" y="94" width="18" height="66"/><rect x="390" y="66" width="22" height="94"/><rect x="414" y="80" width="16" height="80"/><rect x="458" y="56" width="20" height="104"/><rect x="480" y="72" width="26" height="88"/><rect x="508" y="62" width="18" height="98"/><rect x="528" y="90" width="22" height="70"/><path d="M432 160 V40 L444 16 L456 30 V160 Z"/></g>
+<g fill="none" stroke="#ffb3e9" stroke-width="1.2" stroke-linejoin="round"><path d="M4 160 L24.0 120 L44 160 Z"/><path d="M34 160 L63.0 98 L92 160 Z"/><path d="M80 160 L102.0 116 L124 160 Z"/><path d="M112 160 L129.0 128 L146 160 Z"/><rect x="150" y="104" width="122" height="7"/><rect x="156" y="111" width="5" height="49"/><rect x="175" y="111" width="5" height="49"/><rect x="194" y="111" width="5" height="49"/><rect x="213" y="111" width="5" height="49"/><rect x="232" y="111" width="5" height="49"/><rect x="251" y="111" width="5" height="49"/><rect x="270" y="111" width="5" height="49"/><rect x="282" y="128" width="78" height="32"/><rect x="303" y="113" width="36" height="15"/><rect x="309" y="102" width="24" height="11"/><path d="M309 102 A12 13 0 0 1 333 102 Z"/><rect x="319" y="80" width="4" height="10"/><rect x="370" y="94" width="18" height="66"/><rect x="390" y="66" width="22" height="94"/><rect x="414" y="80" width="16" height="80"/><rect x="458" y="56" width="20" height="104"/><rect x="480" y="72" width="26" height="88"/><rect x="508" y="62" width="18" height="98"/><rect x="528" y="90" width="22" height="70"/><path d="M432 160 V40 L444 16 L456 30 V160 Z"/><path d="M150 92 H272 M150 104 L159.5 92 L169 104 M169 104 L178.5 92 L188 104 M188 104 L197.5 92 L207 104 M207 104 L216.5 92 L226 104 M226 104 L235.5 92 L245 104 M245 104 L254.5 92 L264 104"/></g>
+</svg>
+    <div class="hgrid" aria-hidden="true"></div>
+    <button type="button" class="themebtn" id="themebtn" aria-pressed="false" aria-label="Switch to light theme" title="Switch to light theme"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4 A8 8 0 0 1 12 20 Z" fill="currentColor"/></svg></button>
+    <div class="hcopy">
       <div class="eyebrow">City of Edmonton open data · neighbourhoods &amp; statutory plans</div>
       <h1>Edmonton Growth <span>Monitor</span></h1>
+      <div class="asof" id="asof">Loading data…</div>
+      <div class="lights" id="lights">
+        <span class="light" id="lt-permits"><i></i>Permits</span>
+        <span class="light" id="lt-assess"><i></i>Assessments</span>
+        <span class="light" id="lt-cmhc"><i></i>CMHC</span>
+      </div>
     </div>
-    <div class="asof" id="asof">Loading data…</div>
-  </div>
+  </header>
+  <script>
+  (function () {
+    var b = document.getElementById("themebtn"), root = document.documentElement;
+    function sync() { var l = root.dataset.theme === "light"; var t = l ? "Switch to dark theme" : "Switch to light theme"; b.setAttribute("aria-pressed", String(l)); b.setAttribute("aria-label", t); b.title = t; }
+    sync();
+    b.addEventListener("click", function () {
+      var n = root.dataset.theme === "light" ? "dark" : "light"; root.dataset.theme = n;
+      try { localStorage.setItem("egm-theme", n); } catch (e) {}
+      sync(); document.dispatchEvent(new Event("egm-themechange"));
+    });
+  })();
+  </script>
   <div class="kpis" id="kpis"></div>
 
   <div class="tabs" role="tablist">
@@ -570,6 +624,9 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
         <div id="cmpchart"></div>
         <h3 style="font-size:18px;margin-top:18px">Average residential assessment</h3>
         <div id="cmpassess"></div>
+        <h3 style="font-size:18px;margin-top:18px">Built density</h3>
+        <div class="note">Homes per hectare of residential land with finished buildings. <a href="#faq" data-goto="faq">How it is worked out</a>.</div>
+        <div id="cmpdensity"></div>
       </div>
     </div>
   </section>
@@ -716,6 +773,12 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
   const arps = plans.filter(p => p.arp);
   const remaining = d3.sum(tracked, p => p.remaining_units || 0);
   document.getElementById("asof").innerHTML = `Data refreshed <span class="mono">${D.generated.replace("T", " ")}</span> · updates weekly`;
+  [["lt-permits", "Permits", D.generated], ["lt-assess", "Assessments", PA && PA.generated], ["lt-cmhc", "CMHC", CM && CM.generated]].forEach(([id, label, g]) => {
+    const el = document.getElementById(id), t = g ? Date.parse(g) : NaN;
+    if (isNaN(t)) { el.title = label + " data not loaded"; return; }
+    el.classList.add(Date.now() - t <= 8 * 864e5 ? "on" : "stale");
+    el.title = label + " data refreshed " + g.slice(0, 10);
+  });
   document.getElementById("kpis").innerHTML = [
     [fmt(d3.sum(nbs, n => n.pop["2021"] || 0)), "Population, 2021 federal census"],
     [fmt(sumY(String(LY)) - sumY(String(LY), "demo")), `Net units permitted in ${LY}`],
@@ -1462,9 +1525,16 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
     document.getElementById("cmptable").innerHTML = `<thead><tr><th></th>${ns.map((n, i) => `<th class="n"><i class="sw" style="background:var(${SL[i]})"></i>${n.name}</th>`).join("")}</tr></thead><tbody>` +
       rowsDef.map(([l, f]) => `<tr style="cursor:default"><td>${l}</td>${ns.map(n => `<td class="n">${f(n)}</td>`).join("")}</tr>`).join("") + "</tbody>";
     document.getElementById("cmpkey").innerHTML = ns.map((n, i) => `<span><i class="sw" style="background:var(${SL[i]})"></i>${n.name}</span>`).join("");
-    if (!ns.length) { document.getElementById("cmpchart").innerHTML = document.getElementById("cmpassess").innerHTML = `<div class="note">Add a neighbourhood to compare.</div>`; return; }
+    if (!ns.length) { document.getElementById("cmpchart").innerHTML = document.getElementById("cmpassess").innerHTML = document.getElementById("cmpdensity").innerHTML = `<div class="note">Add a neighbourhood to compare.</div>`; return; }
     lineChart(document.getElementById("cmpchart"), ns.map((n, i) => ({ name: n.name, color: css(SL[i]), pts: YEARS.map(y => ({ x: y, v: n.permits[y] ? n.permits[y].units - n.permits[y].demo : 0 })) })), { w: 600, h: 220, zero: true, aria: "Units permitted per year, compared" });
     lineChart(document.getElementById("cmpassess"), ns.map((n, i) => ({ name: n.name, color: css(SL[i]), pts: Object.entries(n.assess).map(([y, a]) => ({ x: y, v: a.res_n > 20 ? a.res_v / a.res_n : null })) })), { w: 600, h: 200, yf: v => "$" + d3.format("~s")(v), tf: money, aria: "Average residential assessment, compared" });
+    const dRows = ns.map((n, i) => ({ n, i, p: PR && PR[n.id] })).filter(r => r.p && r.p.built_density != null)
+      .map(r => ({ label: r.n.name, parts: [{ v: r.p.built_density, color: css(SL[r.i]), name: "Built density" }] }));
+    if (dRows.length && medBD != null) dRows.push({ label: "Citywide median", parts: [{ v: medBD, color: css("--s-other"), name: "Citywide median" }] });
+    const missing = ns.filter(n => !(PR && PR[n.id] && PR[n.id].built_density != null)).map(n => n.name);
+    if (dRows.length) hbars(document.getElementById("cmpdensity"), dRows, fmt1, "Built density, homes per hectare");
+    else document.getElementById("cmpdensity").innerHTML = `<div class="note">No built density figures for these neighbourhoods.</div>`;
+    if (missing.length) document.getElementById("cmpdensity").insertAdjacentHTML("beforeend", `<div class="note">No figure for ${missing.join(", ")} (too little built residential land or too few homes, or left out; see the FAQ).</div>`);
   }
 
   // ---------- all-neighbourhood table
@@ -1771,7 +1841,6 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
     rtable(document.getElementById("txrank"), TX_COLS, rows, txSt, renderTax);
     txRows = rows;
   }
-  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderActive);
   if (PA) {
     const sr = PA.sources, rt = PA.municipal_rates, r4 = v => v.toFixed(4);
     const fp = document.getElementById("faq-tax-p");
@@ -1818,6 +1887,9 @@ td .mini i { position: absolute; inset: 0 auto 0 0; background: var(--accent); }
   paint();
   select(nb0 && byId.has(nb0) ? nb0 : nameToId.get("the orchards at ellerslie") || nbs[0].id);
   setTab(t0);
-  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { paint(); select(selected); stackedBars(document.getElementById("citychart"), cityRows, { w: 1200, h: 260 }); });
+  document.addEventListener("egm-themechange", () => {
+    paint(); select(selected); stackedBars(document.getElementById("citychart"), cityRows, { w: 1200, h: 260 });
+    setTab(tabs.find(b => b.getAttribute("aria-selected") === "true").dataset.tab);
+  });
 })();
 </script>
