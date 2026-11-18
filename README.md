@@ -47,6 +47,21 @@ Units come from `units_added` on each building permit, split by housing type (`s
   garage or garden suite in an accessory building.
 - **New units in existing apartment buildings** ("Add Suites to Multi-Dwelling" on an apartment or
   mixed-use building) count as apartments, not suites. Office-to-residential conversions count.
+- **Home-improvement permits published without a unit count.** Since mid-2018 the City's open data
+  lists "Home Improvement" permits with no work type and no `units_added`, only a description. That includes
+  nearly every secondary suite added to an existing house and most house demolitions, so
+  `home_improvement_units` reads the City's standard wording:
+  - a suite or garden suite only when the description starts "To add / develop / construct / create a
+    Dwelling (Secondary Suite, Garden Suite …)"; 1 unit, or the number stated (up to 4). Suites that existed
+    without permits and are made legal are included, as the City counts them;
+  - a demolition only when, after setting aside garages, sheds and accessory buildings, a home is named:
+    a house or mobile home is 1 unit, a semi-detached house or duplex 2; row-house and apartment
+    demolitions with no stated size are left out.
+  Checked against the City's Residential Building Permit Activities dashboard (gis.edmonton.ca, layer
+  `Hosted/BUILDING_PERMITS_Dashboard`, updated quarterly), 2017–2025: suites within 2–9% (slightly under)
+  every year and demolitions within about 6%; by neighbourhood, 2024–25, 210 of 222 within 10% for suites
+  and 169 of 173 for demolitions. Fewer than 1% of the added suites are at an address that already had a
+  suite counted on another permit.
 - **Excluded** (shown in the site's Sources and method panel with counts):
   - foundation / structural-frame permits whose building also has a "New" permit (same units twice);
   - a second new-house permit at the same address (re-issue of a lapsed permit), unless a demolition

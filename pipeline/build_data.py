@@ -193,6 +193,38 @@ def split_units(r):
     return {ht: u}
 
 
+# Since mid-2018 the City publishes "Home Improvement" permits with no work type and no unit count, only a
+# description. That includes nearly every secondary suite added to an existing house and most house
+# demolitions. These rules read only the City's standard wording and leave anything unclear out.
+# Checked against the City's Residential Building Permit Activities dashboard (README > Unit counting rules).
+ADD_SUITE = re.compile(r"^\W*(?:\*+\s*)?to\s+(?:add|develop|construct|create)\s+(a|an|one|two|three|four|\d+)\s+(?:new\s+)?"
+                       r"(dwellings?|secondary\s+suites?|garden\s+suites?|garage\s+suites?|backyard\s+house)\b", re.I)
+SUITE_COUNT = {"a": 1, "an": 1, "one": 1, "two": 2, "three": 3, "four": 4}
+DEMOLISH = re.compile(r"\bdemolish", re.I)
+ACCESSORY = re.compile(r"accessory\s+building\s*(?:\([^)]*\))?|detached\s+garage|garage|shed", re.I)
+HOUSE_WORDS = re.compile(r"single\s+detached|semi-?\s*detached|duplex|row\s*hous|apartment|mobile\s+home|residential\s+use\s+building|dwelling|house", re.I)
+
+
+def home_improvement_units(r):
+    """Units added (+) or demolished (-) by a permit published without a work type, read from its
+    description; 0 if the description doesn't clearly add a suite or demolish a home."""
+    d = r.get("job_description") or ""
+    m = ADD_SUITE.match(d)
+    if m:
+        n = int(m.group(1)) if m.group(1).isdigit() else SUITE_COUNT[m.group(1).lower()]
+        return n if n <= 4 else 0
+    if DEMOLISH.search(d):
+        rest = ACCESSORY.sub("", d)  # a garage or shed demolished alongside is not a home
+        if not HOUSE_WORDS.search(rest):
+            return 0
+        if re.search(r"semi-?\s*detached|duplex", rest, re.I):
+            return -2
+        if re.search(r"row\s*hous|apartment", rest, re.I):
+            return 0  # size not stated in this wording; left out rather than guessed
+        return -1
+    return 0
+
+
 def staged_duplicates(rows):
     """Foundation / structural-frame permits that list the same units as the building's own "New" permit.
     Returns the ids (positions in rows) to skip."""
@@ -347,6 +379,21 @@ def main():
         "$where": "units_added != 0",
         "$order": "row_id",
     }, cache_key="bp_units_v2")
+    # permits published without a work type (see home_improvement_units)
+    hi = soql("building_permits", {
+        "$select": "issue_date, year, building_type, job_category, job_description, address, construction_value, neighbourhood_numberr, latitude, longitude",
+        "$where": "work_type is null and job_category = 'Home Improvement'",
+        "$order": "row_id",
+    }, cache_key="bp_home_improvement_v1")
+    hi_added = defaultdict(float)
+    for r in hi:
+        u = home_improvement_units(r)
+        if not u:
+            continue
+        hi_added["suites" if u > 0 else "demolished"] += abs(u)
+        bp.append({**r, "units_added": str(u), "from_description": True,
+                   "work_type": "(07) Add Suites to Single Dwelling" if u > 0 else "(99) Demolition"})
+    print("  read from home-improvement descriptions:", {k: round(v) for k, v in hi_added.items()})
 
     # --- plans
     print("Statutory plans")
@@ -794,6 +841,7 @@ def main():
     out = {
         "generated": now.isoformat(timespec="minutes"),
         "unit_exclusions": {k: round(v) for k, v in excluded_units.items()},
+        "from_descriptions": {k: round(v) for k, v in hi_added.items()},
         "current_year": now.year,
         "sources": {k: f"https://data.edmonton.ca/d/{v}" for k, v in DATASETS.items()},
         "neighbourhoods": list(nbhds.values()),
